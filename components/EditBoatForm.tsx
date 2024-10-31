@@ -1,94 +1,66 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { initializeApp, getApps, FirebaseApp } from "firebase/app"
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, FirebaseStorage } from 'firebase/storage'
-import { getDatabase, ref as dbRef, push, Database } from 'firebase/database'
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getDatabase, ref as dbRef, update } from 'firebase/database'
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDgJw2Q15zd_5Xh6z5F3UHwyFAMAikbH4Q",
-  authDomain: "nova-yachts-new.firebaseapp.com",
-  projectId: "nova-yachts-new",
-  storageBucket: "nova-yachts-new.appspot.com",
-  messagingSenderId: "211610700774",
-  appId: "1:211610700774:web:aec6546014d2073e08a427",
-  measurementId: "G-QK02XR3XSZ",
-  databaseURL: "https://nova-yachts-new-default-rtdb.europe-west1.firebasedatabase.app"
-};
-
-// Initialize Firebase
-let app: FirebaseApp;
-let storage: FirebaseStorage;
-let database: Database;
-
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-  storage = getStorage(app);
-  database = getDatabase(app);
+interface Boat {
+  id: string;
+  name: string;
+  condition: string;
+  taxStatus: string;
+  engines: string;
+  propulsionType: string;
+  location: string;
+  price: string;
+  year: string;
+  sizeFeet: string;
+  sizeMeters: string;
+  beamFeet: string;
+  beamMeters: string;
+  fuelCapacity: string;
+  description: string;
+  basicListing: string;
+  equipment: {
+    airConditioning: boolean;
+    generator: boolean;
+    hydraulicPasarelle: boolean;
+    gps: boolean;
+    autopilot: boolean;
+    radar: boolean;
+    satTV: boolean;
+    solarPanel: boolean;
+    bowThruster: boolean;
+    sternThruster: boolean;
+    teakCockpit: boolean;
+    teakFlybridge: boolean;
+    teakSidedeck: boolean;
+  };
+  mainPhoto?: string;
+  otherPhotos?: string[];
+  [key: string]: any;
 }
 
-interface AddBoatFormProps {
+interface EditBoatFormProps {
+  boat: Boat;
   onSuccess: () => void;
 }
 
-export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [loginError, setLoginError] = useState('')
+export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
   const [activeTab, setActiveTab] = useState("basic")
-  const [formData, setFormData] = useState({
-    name: '',
-    condition: '',
-    taxStatus: '',
-    engines: '',
-    propulsionType: '',
-    location: '',
-    price: '',
-    year: '',
-    sizeFeet: '',
-    sizeMeters: '',
-    beamFeet: '',
-    beamMeters: '',
-    fuelCapacity: '',
-    description: '',
-    basicListing: '',
-    equipment: {
-      airConditioning: false,
-      generator: false,
-      hydraulicPasarelle: false,
-      gps: false,
-      autopilot: false,
-      radar: false,
-      satTV: false,
-      solarPanel: false,
-      bowThruster: false,
-      sternThruster: false,
-      teakCockpit: false,
-      teakFlybridge: false,
-      teakSidedeck: false,
-    },
-  })
-
+  const [formData, setFormData] = useState(boat)
   const [mainPhoto, setMainPhoto] = useState<File | null>(null)
   const [otherPhotos, setOtherPhotos] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (!app) {
-      app = initializeApp(firebaseConfig); 
-      storage = getStorage(app);
-      database = getDatabase(app);
-    }
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    const factor = 3.28084 // 1 meter = 3.28084 feet
+    const factor = 3.28084
     if (name === 'sizeFeet') {
       setFormData(prev => ({ ...prev, sizeFeet: value, sizeMeters: (parseFloat(value) / factor).toFixed(2) }))
     } else if (name === 'sizeMeters') {
@@ -98,7 +70,7 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
 
   const handleBeamChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    const factor = 3.28084 // 1 meter = 3.28084 feet
+    const factor = 3.28084
     if (name === 'beamFeet') {
       setFormData(prev => ({ ...prev, beamFeet: value, beamMeters: (parseFloat(value) / factor).toFixed(2) }))
     } else if (name === 'beamMeters') {
@@ -130,47 +102,45 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
     setLoading(true)
 
     try {
-      if (!storage || !database) {
-        throw new Error('Firebase not initialized');
-      }
+      const storage = getStorage()
+      const database = getDatabase()
 
-      // Format description to preserve newlines
-      const formattedDescription = formData.description.replace(/\n/g, '\\n')
-
-      // Upload main photo
-      let mainPhotoUrl = ''
+      let mainPhotoUrl = formData.mainPhoto
       if (mainPhoto) {
         const mainPhotoRef = storageRef(storage, `boat-images/main/${mainPhoto.name}`)
         await uploadBytes(mainPhotoRef, mainPhoto)
         mainPhotoUrl = await getDownloadURL(mainPhotoRef)
       }
 
-      // Upload other photos
-      const otherPhotoUrls = await Promise.all(
-        otherPhotos.map(async (photo) => {
-          const photoRef = storageRef(storage, `boat-images/other/${photo.name}`)
-          await uploadBytes(photoRef, photo)
-          return getDownloadURL(photoRef)
-        })
-      )
+      let otherPhotoUrls = formData.otherPhotos || []
+      if (otherPhotos.length > 0) {
+        const newOtherPhotoUrls = await Promise.all(
+          otherPhotos.map(async (photo) => {
+            const photoRef = storageRef(storage, `boat-images/other/${photo.name}`)
+            await uploadBytes(photoRef, photo)
+            return getDownloadURL(photoRef)
+          })
+        )
+        otherPhotoUrls = [...otherPhotoUrls, ...newOtherPhotoUrls]
+      }
 
-      // Prepare boat data with formatted description
-      const boatData = {
+      const formattedDescription = formData.description.replace(/\n/g, '\\n')
+
+      const updatedBoatData = {
         ...formData,
-        description: formattedDescription, // Use formatted description
+        description: formattedDescription,
         mainPhoto: mainPhotoUrl,
         otherPhotos: otherPhotoUrls,
       }
 
-      // Add boat data to Realtime Database
-      const boatsRef = dbRef(database, 'boats');
-      await push(boatsRef, boatData);
+      const boatRef = dbRef(database, `boats/${boat.id}`)
+      await update(boatRef, updatedBoatData)
 
-      alert('Boat added successfully!')
+      alert('Boat updated successfully!')
       onSuccess()
     } catch (error) {
-      console.error('Error adding boat:', error)
-      alert('Error adding boat. Please try again.')
+      console.error('Error updating boat:', error)
+      alert('Error updating boat. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -178,7 +148,8 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-6 text-gray-800">Add New Boat</h2>
+      <h2 className="text-2xl font-semibold mb-6 text-gray-800">Edit Boat</h2>
+      
       <div className="mb-6 overflow-x-auto">
         <nav className="flex space-x-4 border-b border-gray-200">
           {['basic', 'equipment', 'description', 'photos'].map((tab) => (
@@ -191,7 +162,7 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {tab.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </nav>
@@ -208,7 +179,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -216,12 +186,11 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
             <div>
               <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Price (€)</label>
               <input
-                type="number"
+                type="text"
                 id="price"
                 name="price"
                 value={formData.price}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -231,7 +200,7 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
               <select
                 name="taxStatus"
                 value={formData.taxStatus}
-                onChange={(e) => setFormData(prev => ({ ...prev, taxStatus: e.target.value }))}
+                onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select tax status</option>
@@ -245,7 +214,7 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
               <select
                 name="condition"
                 value={formData.condition}
-                onChange={(e) => setFormData(prev => ({ ...prev, condition: e.target.value }))}
+                onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select condition</option>
@@ -257,12 +226,11 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
             <div>
               <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">Year</label>
               <input
-                type="number"
+                type="text"
                 id="year"
                 name="year"
                 value={formData.year}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -275,7 +243,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="engines"
                 value={formData.engines}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -288,7 +255,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="propulsionType"
                 value={formData.propulsionType}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -301,7 +267,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="sizeFeet"
                 value={formData.sizeFeet}
                 onChange={handleSizeChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -314,7 +279,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="sizeMeters"
                 value={formData.sizeMeters}
                 onChange={handleSizeChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -327,7 +291,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="beamFeet"
                 value={formData.beamFeet}
                 onChange={handleBeamChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -340,7 +303,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="beamMeters"
                 value={formData.beamMeters}
                 onChange={handleBeamChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -353,7 +315,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="fuelCapacity"
                 value={formData.fuelCapacity}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -366,7 +327,6 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                 name="location"
                 value={formData.location}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -382,7 +342,7 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
                 <label htmlFor="basicListing" className="ml-2 text-sm font-medium text-gray-700">
-                  Basic Listing (can&apos;t be clicked into)
+                  Basic Listing (can't be clicked into)
                 </label>
               </div>
             </div>
@@ -453,9 +413,9 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
           disabled={loading}
           className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
         >
-          {loading ? 'Adding Boat...' : 'Add Boat'}
+          {loading ? 'Updating Boat...' : 'Update Boat'}
         </button>
       </form>
     </div>
   )
-}
+} 

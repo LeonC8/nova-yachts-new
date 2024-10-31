@@ -36,7 +36,7 @@ export function Navbar({ transparentOnTop = true }: NavbarProps) {
   }
 
   const headerClasses = transparentOnTop
-    ? `fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white text-black shadow-md' : 'bg-transparent text-white'}`
+    ? `fixed top-0 left-0 right-0 z-10 transition-all duration-300 ${isScrolled ? 'bg-white text-black shadow-md' : 'bg-transparent text-white'}`
     : 'sticky top-0 z-50 bg-white text-black shadow-md'
 
   const logoClasses = `h-10 md:h-12 w-auto ${(isScrolled || !transparentOnTop) ? 'invert opacity-80' : ''}`

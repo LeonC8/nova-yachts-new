@@ -8,6 +8,7 @@ import { Footer } from './Footer'
 import { useRouter } from 'next/navigation'
 import { Navbar } from './Navbar'
 import { Loader } from './Loader'
+import { X, Phone, Mail, MapPin } from 'lucide-react'
 
 // Firebase configuration
 const firebaseConfig = {
@@ -40,10 +41,50 @@ interface Boat {
   basicListing: string;
 }
 
+interface ContactOverlayProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function ContactOverlay({ isOpen, onClose }: ContactOverlayProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-md hover:bg-gray-100 transition-colors"
+        >
+          <X className="h-5 w-5 text-gray-500" />
+        </button>
+        
+        <h2 className="text-xl text-gray-800 font-medium mb-3">Contact</h2>
+        <p className="text-gray-600 mb-4 text-sm mb-6 pr-12">Please contact us to get more information about this yacht.</p>
+        <div className="space-y-4">
+          <div className="flex items-center">
+            <MapPin className="h-5 w-5 text-gray-800 mr-4" />
+            <span className="text-gray-600 text-sm">Hribarov Prilaz 10, Zagreb, Croatia</span>
+          </div>
+          <div className="flex items-center">
+            <Phone className="h-5 w-5 text-gray-800 mr-4" />
+            <span className="text-gray-600 text-sm">+385 95 521 6033</span>
+          </div>
+          <div className="flex items-center">
+            <Mail className="h-5 w-5 text-gray-800 mr-4" />
+            <span className="text-gray-600 text-sm">office@novayachts.eu</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function NewYachtsPageComponent() {
   const [inStockYachts, setInStockYachts] = useState<Boat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const [isContactOverlayOpen, setIsContactOverlayOpen] = useState(false);
 
   useEffect(() => {
     // Scroll to top when component mounts
@@ -85,7 +126,9 @@ export function NewYachtsPageComponent() {
   }, []);
 
   const handleBoatClick = (boat: Boat) => {
-    if (boat.basicListing !== "yes") {
+    if (boat.basicListing === "yes") {
+      setIsContactOverlayOpen(true);
+    } else {
       router.push(`/boat/${boat.id}`);
     }
   };
@@ -95,7 +138,7 @@ export function NewYachtsPageComponent() {
       {isLoading && <Loader />}
       <Navbar transparentOnTop={false} />
       <main className="flex-grow">
-        <section className="container mx-auto px-4 mt-4 sm:mt-4 mb-4 py-5 overflow-hidden xl:px-20">
+        <section className="container mx-auto px-4 sm:mt-4 mb-4 py-5 overflow-hidden xl:px-20">
           <h2 className="text-2xl font-medium mb-2 font-serif">New Yachts</h2>
           <p className="pt-0 pb-6 mt-0 text-gray-700 text-sm ">{inStockYachts.length} available</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -120,6 +163,10 @@ export function NewYachtsPageComponent() {
         </section>
       </main>
       <Footer />
+      <ContactOverlay 
+        isOpen={isContactOverlayOpen} 
+        onClose={() => setIsContactOverlayOpen(false)} 
+      />
     </div>
   )
 }

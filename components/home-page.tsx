@@ -81,12 +81,6 @@ function ContactOverlay({ isOpen, onClose }: ContactOverlayProps) {
 }
 
 export function HomePageComponent() {
-  const [currentSlide, setCurrentSlide] = useState(0)
-  const [inStockYachts, setInStockYachts] = useState<Boat[]>([])
-  const [preOwnedYachts, setPreOwnedYachts] = useState<Boat[]>([])
-  const [isLoading, setIsLoading] = useState(false);
-  const [isContactOverlayOpen, setIsContactOverlayOpen] = useState(false);
-
   const carouselImages = [
     "https://www.approvedboats.com/wp/wp-content/uploads/approvedboats.com/2023/12/F-lineSq68-ext01-rev.jpg",
     "https://images.boattrader.com/resize/1/88/14/8588814_20231013073947744_1_XLARGE.jpg",
@@ -107,6 +101,14 @@ export function HomePageComponent() {
       url: "https://www.numarine.com"
     }
   ]
+
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const [inStockYachts, setInStockYachts] = useState<Boat[]>([])
+  const [preOwnedYachts, setPreOwnedYachts] = useState<Boat[]>([])
+  const [isLoading, setIsLoading] = useState(true);
+  const [isContactOverlayOpen, setIsContactOverlayOpen] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(0);
+  const totalImages = carouselImages.length + brandCards.length;
 
   const router = useRouter()
 
@@ -165,6 +167,16 @@ export function HomePageComponent() {
     });
   }, []);
 
+  const handleImageLoad = () => {
+    setImagesLoaded(prev => {
+      const newCount = prev + 1;
+      if (newCount >= totalImages) {
+        setIsLoading(false);
+      }
+      return newCount;
+    });
+  };
+
   return (
     <div>
       {isLoading && <Loader />}
@@ -172,7 +184,7 @@ export function HomePageComponent() {
       <main className="flex-grow">
 
         <section className="relative">
-          <div className="relative h-[450px] md:h-[550px] overflow-hidden">
+          <div className="relative h-[450px] md:h-[550px] overflow-hidden bg-gray-200">
             {carouselImages.map((img, index) => (
               <div
                 key={index}
@@ -180,7 +192,12 @@ export function HomePageComponent() {
                   index === currentSlide ? 'opacity-100' : 'opacity-0'
                 }`}
               >
-                <img src={img} alt={`Slide ${index + 1}`} className="w-full h-full object-cover" />
+                <img 
+                  src={img} 
+                  alt={`Slide ${index + 1}`} 
+                  className="w-full h-full object-cover"
+                  onLoad={handleImageLoad}
+                />
                 <div className="absolute inset-0 bg-black opacity-60"></div>
               </div>
             ))}
@@ -219,10 +236,15 @@ export function HomePageComponent() {
                 href={brand.url} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="relative rounded shadow-md overflow-hidden cursor-pointer group"
+                className="relative rounded shadow-md overflow-hidden cursor-pointer group bg-gray-200"
               >
                 <div className="absolute inset-0 bg-black opacity-50"></div>
-                <img src={brand.image} alt={`${brand.title} Yacht`} className="w-full h-48 md:h-96 object-cover" />
+                <img 
+                  src={brand.image} 
+                  alt={`${brand.title} Yacht`} 
+                  className="w-full h-48 md:h-96 object-cover"
+                  onLoad={handleImageLoad}
+                />
                 <div className="absolute inset-0 flex flex-col justify-end p-6">
                   <div className="flex justify-between items-center w-full text-white">
                     <div>
@@ -267,6 +289,7 @@ export function HomePageComponent() {
                           src={yacht.mainPhoto} 
                           alt={yacht.name} 
                           className="w-full h-48 md:h-64 object-cover"
+                          onLoad={handleImageLoad}
                         />
                         <div className="p-4">
                           <div className="flex justify-between items-start">
@@ -290,6 +313,7 @@ export function HomePageComponent() {
                         src={yacht.mainPhoto} 
                         alt={yacht.name} 
                         className="w-full h-48 md:h-64 object-cover"
+                        onLoad={handleImageLoad}
                       />
                       <div className="p-4">
                         <h3 className="text-md font-medium mb-2">{yacht.name}</h3>
@@ -333,13 +357,14 @@ export function HomePageComponent() {
                           src={yacht.mainPhoto} 
                           alt={yacht.name} 
                           className="w-full h-48 md:h-64 object-cover"
+                          onLoad={handleImageLoad}
                         />
                         <div className="p-4">
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="text-md font-medium mb-2">{yacht.name}</h3>
                               <p className="text-sm text-gray-600">
-                                {Number(yacht.price) === 0 ? "Price on ask" : `€ ${Number(yacht.price).toLocaleString()}`} • {yacht.year}
+                                {Number(yacht.price) === 0 ? "POA" : `€ ${Number(yacht.price).toLocaleString()}`} • {yacht.year}
                               </p>
                             </div>
                             <ArrowRight className="h-4 w-4 text-gray-500 " />
@@ -356,6 +381,7 @@ export function HomePageComponent() {
                         src={yacht.mainPhoto} 
                         alt={yacht.name} 
                         className="w-full h-48 md:h-64 object-cover"
+                        onLoad={handleImageLoad}
                       />
                       <div className="p-4">
                         <h3 className="text-md font-medium mb-2">{yacht.name}</h3>

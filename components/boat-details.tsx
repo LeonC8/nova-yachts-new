@@ -184,9 +184,10 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
               <Image 
                 src={boatImages[0]} 
                 alt={`${boatDetails.name} - Main Image`} 
-                width={500} 
-                height={300} 
-                style={{ objectFit: 'cover' }} 
+                fill
+                sizes="(max-width: 768px) 100vw, 66vw"
+                priority
+                className="object-cover"
               />
               <div className="absolute bottom-3 right-3 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-xs font-medium text-gray-300 hover:bg-opacity-70 transition-all duration-200 ease-in-out">
                 {boatImages.length} photos
@@ -198,9 +199,9 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
                   <Image 
                     src={img} 
                     alt={`${boatDetails.name} - Image ${index + 2}`} 
-                    width={500} 
-                    height={300} 
-                    style={{ objectFit: 'cover' }} 
+                    fill
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                    className="object-cover"
                   />
                 </div>
               ))}
@@ -212,9 +213,9 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
                   <Image 
                     src={img} 
                     alt={`${boatDetails.name} - Image ${index + 2}`} 
-                    width={500} 
-                    height={300} 
-                    style={{ objectFit: 'cover' }} 
+                    fill
+                    sizes="25vw"
+                    className="object-cover"
                   />
                 </div>
               ))}
@@ -226,14 +227,14 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
           <section className="mb-8">
             <h2 className="text-xl text-gray-800 font-medium mb-6">General</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex flex-col justify-between h-full">
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-300 px-4 py-4 flex flex-col justify-between h-full">
                 <div className="text-md font-medium text-gray-700 mb-4">{boatDetails.year}</div>
                 <div className="flex items-center text-sm text-gray-500">
                   {/* <Calendar className="h-4 w-4 text-gray-500 mr-2" /> */}
                   <span>Year</span>
                 </div>
               </div>
-              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex flex-col justify-between h-full">
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-300 px-4 py-4 flex flex-col justify-between h-full">
                 <div className="text-md font-medium text-gray-700 mb-4">{boatDetails.sizeMeters}m</div>
                 <div className="flex items-center text-sm text-gray-500">
                   {/* <Ruler className="h-4 w-4 text-gray-500 mr-2" /> */}
@@ -241,7 +242,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
                 </div>
               </div>
               
-              <div className="col-span-2 bg-white p-3 rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex flex-col justify-between h-full">
+              <div className="col-span-2 bg-white p-3 rounded-lg shadow-sm border border-gray-300 px-4 py-4 flex flex-col justify-between h-full">
                 <div className="text-md font-medium text-gray-700 mb-4">{boatDetails.engines}</div>
                 <div className="flex items-center text-sm text-gray-500">
                   {/*  */}
@@ -300,8 +301,8 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-4 space-y-8">
-            <section className="lg:bg-white lg:p-6 lg:rounded-lg lg:shadow-sm lg:border lg:border-gray-200">
+          <div className="md:sticky md:top-4 space-y-8">
+            <section className="lg:bg-white lg:p-6 lg:rounded-lg lg:shadow-lg lg:border lg:border-gray-300">
               <h2 className="text-xl text-gray-800 font-medium mb-6">Contact</h2>
               <div className="space-y-4">
                 <div className="flex items-center">
@@ -336,7 +337,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
               <X className="h-6 w-6" />
             </Button>
             <div 
-              className="relative w-full h-full flex items-center justify-center"
+              className="relative w-full h-[80vh] flex items-center justify-center"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
@@ -344,9 +345,9 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
               <Image 
                 src={boatImages[currentImageIndex]} 
                 alt={`${boatDetails.name} - Fullscreen Image`} 
-                width={500} 
-                height={300} 
-                style={{ objectFit: 'cover' }} 
+                fill
+                sizes="100vw"
+                className="object-contain"
               />
               <Button
                 variant="ghost"
