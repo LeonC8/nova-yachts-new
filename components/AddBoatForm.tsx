@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { initializeApp, getApps, FirebaseApp } from "firebase/app"
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, FirebaseStorage } from 'firebase/storage'
 import { getDatabase, ref as dbRef, push, Database } from 'firebase/database'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import type { DropResult, DroppableProvided, DraggableProvided, DraggableStateSnapshot } from '@hello-pangea/dnd'
 
 // Firebase configuration
 const firebaseConfig = {
@@ -30,6 +32,12 @@ if (!getApps().length) {
 
 interface AddBoatFormProps {
   onSuccess: () => void;
+}
+
+interface PreviewImage {
+  id: string;
+  file: File;
+  preview: string;
 }
 
 export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
@@ -69,8 +77,8 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
     },
   })
 
-  const [mainPhoto, setMainPhoto] = useState<File | null>(null)
-  const [otherPhotos, setOtherPhotos] = useState<File[]>([])
+  const [mainPhoto, setMainPhoto] = useState<PreviewImage | null>(null)
+  const [otherPhotos, setOtherPhotos] = useState<PreviewImage[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -115,14 +123,40 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
 
   const handleMainPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setMainPhoto(e.target.files[0])
+      const file = e.target.files[0];
+      setMainPhoto({
+        id: 'main-photo',
+        file,
+        preview: URL.createObjectURL(file)
+      });
     }
   }
 
   const handleOtherPhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setOtherPhotos(Array.from(e.target.files))
+      // Convert FileList to Array and reverse it to maintain OS selection order
+      const filesArray = Array.from(e.target.files).reverse();
+      const newPhotos = filesArray.map((file, index) => ({
+        id: `photo-${Date.now()}-${index}`,
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      setOtherPhotos(prev => [...prev, ...newPhotos]);
     }
+  }
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(otherPhotos);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setOtherPhotos(items);
+  }
+
+  const removePhoto = (id: string) => {
+    setOtherPhotos(prev => prev.filter(photo => photo.id !== id));
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,16 +174,16 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
       // Upload main photo
       let mainPhotoUrl = ''
       if (mainPhoto) {
-        const mainPhotoRef = storageRef(storage, `boat-images/main/${mainPhoto.name}`)
-        await uploadBytes(mainPhotoRef, mainPhoto)
+        const mainPhotoRef = storageRef(storage, `boat-images/main/${mainPhoto.file.name}`)
+        await uploadBytes(mainPhotoRef, mainPhoto.file)
         mainPhotoUrl = await getDownloadURL(mainPhotoRef)
       }
 
-      // Upload other photos
+      // Upload other photos in their current order
       const otherPhotoUrls = await Promise.all(
         otherPhotos.map(async (photo) => {
-          const photoRef = storageRef(storage, `boat-images/other/${photo.name}`)
-          await uploadBytes(photoRef, photo)
+          const photoRef = storageRef(storage, `boat-images/other/${photo.file.name}`)
+          await uploadBytes(photoRef, photo.file)
           return getDownloadURL(photoRef)
         })
       )
@@ -423,27 +457,97 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
         )}
 
         {activeTab === 'photos' && (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="mainPhoto" className="block text-sm font-medium text-gray-700 mb-1">Main Photo</label>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="mainPhoto" className="block text-sm font-medium text-gray-700">Main Photo</label>
               <input
                 type="file"
                 id="mainPhoto"
                 onChange={handleMainPhotoChange}
                 accept="image/*"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
+              {mainPhoto && (
+                <div className="relative w-48 h-48 mt-2">
+                  <img
+                    src={mainPhoto.preview}
+                    alt="Main photo preview"
+                    className="w-full h-full object-cover rounded-md"
+                  />
+                  <button
+                    onClick={() => setMainPhoto(null)}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
             </div>
-            <div>
-              <label htmlFor="otherPhotos" className="block text-sm font-medium text-gray-700 mb-1">Other Photos</label>
+
+            <div className="space-y-2">
+              <label htmlFor="otherPhotos" className="block text-sm font-medium text-gray-700">Other Photos</label>
               <input
                 type="file"
                 id="otherPhotos"
                 onChange={handleOtherPhotosChange}
                 multiple
                 accept="image/*"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
+              
+              {otherPhotos.length > 0 && (
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="droppable-photos" direction="vertical">
+                    {(provided: DroppableProvided) => (
+                      <div 
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className="space-y-4 mt-4"
+                      >
+                        {otherPhotos.map((photo, index) => (
+                          <Draggable 
+                            key={photo.id} 
+                            draggableId={photo.id} 
+                            index={index}
+                          >
+                            {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`flex items-center space-x-4 p-2 bg-white rounded-lg border ${
+                                  snapshot.isDragging ? 'border-blue-500 shadow-lg' : 'border-gray-200'
+                                }`}
+                              >
+                                <div className="relative w-24 h-24 flex-shrink-0">
+                                  <img
+                                    src={photo.preview}
+                                    alt={`Photo ${index + 1}`}
+                                    className="w-full h-full object-cover rounded-md"
+                                  />
+                                </div>
+                                <div className="flex-grow flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-700">
+                                    Image {index + 1}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removePhoto(photo.id)}
+                                    className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              )}
             </div>
           </div>
         )}

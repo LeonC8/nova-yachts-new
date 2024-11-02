@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { X, Phone, Mail, ArrowLeft } from 'lucide-react'
+import { X, Phone, Mail, ArrowLeft, Facebook } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -65,8 +65,16 @@ export function Navbar({ transparentOnTop = true }: NavbarProps) {
               <a href="tel:+38598301987" className="text-current hover:text-gray-300 mr-2">
                 <Phone className="w-5 h-5" />
               </a>
-              <a href="mailto:office@novayachts.eu" className="text-current hover:text-gray-300">
+              <a href="mailto:office@novayachts.eu" className="text-current hover:text-gray-300 mr-2">
                 <Mail className="w-5 h-5" />
+              </a>
+              <a 
+                href="https://www.facebook.com/novayachts.eu/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-current hover:text-gray-300"
+              >
+                <Facebook className="w-5 h-5" />
               </a>
             </div>
             <button className="md:hidden" onClick={toggleSidebar}>
