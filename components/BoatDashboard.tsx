@@ -242,12 +242,7 @@ export function BoatDashboard() {
   if (view === 'add') {
     return (
       <div>
-        <button
-          onClick={() => setView('list')}
-          className="mb-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-        >
-          Back to Dashboard
-        </button>
+        
         <AddBoatForm onSuccess={() => {
           fetchBoats()
           setView('list')
@@ -259,12 +254,7 @@ export function BoatDashboard() {
   if (view === 'edit' && selectedBoat) {
     return (
       <div>
-        <button
-          onClick={() => setView('list')}
-          className="mb-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-        >
-          Back to Dashboard
-        </button>
+        
         <EditBoatForm 
           boat={selectedBoat} 
           onSuccess={() => {

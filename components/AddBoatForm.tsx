@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { initializeApp, getApps, FirebaseApp } from "firebase/app"
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, FirebaseStorage } from 'firebase/storage'
+import { getStorage, ref, uploadBytes, getDownloadURL, FirebaseStorage } from 'firebase/storage'
 import { getDatabase, ref as dbRef, push, Database } from 'firebase/database'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult, DroppableProvided, DraggableProvided, DraggableStateSnapshot } from '@hello-pangea/dnd'
+import { resizeImage } from '../utils/imageResizer';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -159,6 +160,23 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
     setOtherPhotos(prev => prev.filter(photo => photo.id !== id));
   }
 
+  const handleImageUpload = async (file: File, path: string) => {
+    try {
+      // Resize image before upload
+      const resizedFile = await resizeImage(file, 1920, 1080); // Max dimensions
+      
+      const storage = getStorage();
+      const storageRef = ref(storage, path);
+      
+      await uploadBytes(storageRef, resizedFile);
+      const downloadURL = await getDownloadURL(storageRef);
+      return downloadURL;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -174,17 +192,20 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
       // Upload main photo
       let mainPhotoUrl = ''
       if (mainPhoto) {
-        const mainPhotoRef = storageRef(storage, `boat-images/main/${mainPhoto.file.name}`)
-        await uploadBytes(mainPhotoRef, mainPhoto.file)
-        mainPhotoUrl = await getDownloadURL(mainPhotoRef)
+        mainPhotoUrl = await handleImageUpload(
+          mainPhoto.file,
+          `boats/${Date.now()}_main_${mainPhoto.file.name}`
+        );
       }
 
       // Upload other photos in their current order
       const otherPhotoUrls = await Promise.all(
         otherPhotos.map(async (photo) => {
-          const photoRef = storageRef(storage, `boat-images/other/${photo.file.name}`)
-          await uploadBytes(photoRef, photo.file)
-          return getDownloadURL(photoRef)
+          const photoUrl = await handleImageUpload(
+            photo.file,
+            `boats/${Date.now()}_${photo.file.name}`
+          );
+          return photoUrl;
         })
       )
 
@@ -212,7 +233,30 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-6 text-gray-800">Add New Boat</h2>
+      <div className="space-y-4 mb-6">
+        <button 
+          onClick={onSuccess}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-5 w-5" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M10 19l-7-7m0 0l7-7m-7 7h18" 
+            />
+          </svg>
+          Back
+        </button>
+        <h2 className="text-2xl font-semibold text-gray-800">Add New Boat</h2>
+      </div>
+      
       <div className="mb-6 overflow-x-auto">
         <nav className="flex space-x-4 border-b border-gray-200">
           {['basic', 'equipment', 'description', 'photos'].map((tab) => (

@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getDatabase, ref as dbRef, update } from 'firebase/database'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import type { DropResult, DroppableProvided, DraggableProvided, DraggableStateSnapshot } from '@hello-pangea/dnd'
+import { resizeImage } from '../utils/imageResizer';
 
 interface Boat {
   id: string;
@@ -46,11 +49,23 @@ interface EditBoatFormProps {
   onSuccess: () => void;
 }
 
+interface PhotoItem {
+  id: string;
+  url: string;
+  file?: File;
+  isNew?: boolean;
+}
+
 export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
   const [activeTab, setActiveTab] = useState("basic")
   const [formData, setFormData] = useState(boat)
   const [mainPhoto, setMainPhoto] = useState<File | null>(null)
-  const [otherPhotos, setOtherPhotos] = useState<File[]>([])
+  const [otherPhotos, setOtherPhotos] = useState<PhotoItem[]>(() => 
+    (boat.otherPhotos || []).map((url, index) => ({
+      id: `existing-${index}`,
+      url
+    }))
+  )
   const [loading, setLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -93,8 +108,28 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
 
   const handleOtherPhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setOtherPhotos(Array.from(e.target.files))
+      const newPhotos = Array.from(e.target.files).map((file, index) => ({
+        id: `new-${Date.now()}-${index}`,
+        url: URL.createObjectURL(file),
+        file,
+        isNew: true
+      }));
+      setOtherPhotos(prev => [...prev, ...newPhotos]);
     }
+  }
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(otherPhotos);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setOtherPhotos(items);
+  }
+
+  const removePhoto = (id: string) => {
+    setOtherPhotos(prev => prev.filter(photo => photo.id !== id));
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,22 +142,23 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
 
       let mainPhotoUrl = formData.mainPhoto
       if (mainPhoto) {
+        const resizedMainPhoto = await resizeImage(mainPhoto, 1920, 1080);
         const mainPhotoRef = storageRef(storage, `boat-images/main/${mainPhoto.name}`)
-        await uploadBytes(mainPhotoRef, mainPhoto)
+        await uploadBytes(mainPhotoRef, resizedMainPhoto)
         mainPhotoUrl = await getDownloadURL(mainPhotoRef)
       }
 
-      let otherPhotoUrls = formData.otherPhotos || []
-      if (otherPhotos.length > 0) {
-        const newOtherPhotoUrls = await Promise.all(
-          otherPhotos.map(async (photo) => {
-            const photoRef = storageRef(storage, `boat-images/other/${photo.name}`)
-            await uploadBytes(photoRef, photo)
+      const updatedOtherPhotoUrls = await Promise.all(
+        otherPhotos.map(async (photo) => {
+          if (photo.isNew && photo.file) {
+            const resizedFile = await resizeImage(photo.file, 1920, 1080);
+            const photoRef = storageRef(storage, `boat-images/other/${photo.file.name}`)
+            await uploadBytes(photoRef, resizedFile)
             return getDownloadURL(photoRef)
-          })
-        )
-        otherPhotoUrls = [...otherPhotoUrls, ...newOtherPhotoUrls]
-      }
+          }
+          return photo.url
+        })
+      )
 
       const formattedDescription = formData.description.replace(/\n/g, '\\n')
 
@@ -130,7 +166,7 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
         ...formData,
         description: formattedDescription,
         mainPhoto: mainPhotoUrl,
-        otherPhotos: otherPhotoUrls,
+        otherPhotos: updatedOtherPhotoUrls,
       }
 
       const boatRef = dbRef(database, `boats/${boat.id}`)
@@ -148,7 +184,29 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-6 text-gray-800">Edit Boat</h2>
+      <div className="space-y-4 mb-6">
+        <button 
+          onClick={onSuccess}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-5 w-5" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M10 19l-7-7m0 0l7-7m-7 7h18" 
+            />
+          </svg>
+          Back
+        </button>
+        <h2 className="text-2xl font-semibold text-gray-800">Edit Boat</h2>
+      </div>
       
       <div className="mb-6 overflow-x-auto">
         <nav className="flex space-x-4 border-b border-gray-200">
@@ -383,27 +441,100 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
         )}
 
         {activeTab === 'photos' && (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="mainPhoto" className="block text-sm font-medium text-gray-700 mb-1">Main Photo</label>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="mainPhoto" className="block text-sm font-medium text-gray-700">Main Photo</label>
               <input
                 type="file"
                 id="mainPhoto"
                 onChange={handleMainPhotoChange}
                 accept="image/*"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
+              {formData.mainPhoto && !mainPhoto && (
+                <div className="relative w-48 h-48 mt-2">
+                  <img
+                    src={formData.mainPhoto}
+                    alt="Current main photo"
+                    className="w-full h-full object-cover rounded-md"
+                  />
+                </div>
+              )}
+              {mainPhoto && (
+                <div className="relative w-48 h-48 mt-2">
+                  <img
+                    src={URL.createObjectURL(mainPhoto)}
+                    alt="New main photo"
+                    className="w-full h-full object-cover rounded-md"
+                  />
+                </div>
+              )}
             </div>
-            <div>
-              <label htmlFor="otherPhotos" className="block text-sm font-medium text-gray-700 mb-1">Other Photos</label>
+
+            <div className="space-y-2">
+              <label htmlFor="otherPhotos" className="block text-sm font-medium text-gray-700">Other Photos</label>
               <input
                 type="file"
                 id="otherPhotos"
                 onChange={handleOtherPhotosChange}
                 multiple
                 accept="image/*"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
+              
+              {otherPhotos.length > 0 && (
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="droppable-photos" direction="vertical">
+                    {(provided: DroppableProvided) => (
+                      <div 
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className="space-y-4 mt-4"
+                      >
+                        {otherPhotos.map((photo, index) => (
+                          <Draggable 
+                            key={photo.id} 
+                            draggableId={photo.id} 
+                            index={index}
+                          >
+                            {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`flex items-center space-x-4 p-2 bg-white rounded-lg border ${
+                                  snapshot.isDragging ? 'border-blue-500 shadow-lg' : 'border-gray-200'
+                                }`}
+                              >
+                                <div className="relative w-24 h-24 flex-shrink-0">
+                                  <img
+                                    src={photo.url}
+                                    alt={`Photo ${index + 1}`}
+                                    className="w-full h-full object-cover rounded-md"
+                                  />
+                                </div>
+                                <div className="flex-grow flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-700">
+                                    Image {index + 1} {photo.isNew ? '(New)' : ''}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removePhoto(photo.id)}
+                                    className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              )}
             </div>
           </div>
         )}

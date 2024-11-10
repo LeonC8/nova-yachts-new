@@ -24,7 +24,7 @@ const firebaseConfig = {
   databaseURL: "https://nova-yachts-new-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
-// Initialize Firebase
+// Initialize Firebase  
 let app: FirebaseApp;
 let database: Database;
 
@@ -105,11 +105,11 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
   }, [id]);
 
   const nextImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % (boatDetails?.otherPhotos?.length || 0))
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % boatImages.length)
   }
 
   const prevImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + (boatDetails?.otherPhotos?.length || 0)) % (boatDetails?.otherPhotos?.length || 0))
+    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + boatImages.length) % boatImages.length)
   }
 
   useEffect(() => {
@@ -154,7 +154,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
     return <div>No boat found</div>;
   }
 
-  const boatImages = [boatDetails.mainPhoto, ...(boatDetails.otherPhotos || [])];
+  const boatImages = boatDetails.otherPhotos ? [boatDetails.mainPhoto, ...boatDetails.otherPhotos] : [boatDetails.mainPhoto];
 
   return (
     <>
