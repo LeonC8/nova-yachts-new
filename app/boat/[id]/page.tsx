@@ -1,8 +1,8 @@
 import { getDatabase, ref, get } from 'firebase/database';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import BoatDetails from '@/components/boat-details';
 
-// Firebase config (copy from your existing config)
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDgJw2Q15zd_5Xh6z5F3UHwyFAMAikbH4Q",
   authDomain: "nova-yachts-new.firebaseapp.com",
@@ -15,21 +15,30 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+let app: FirebaseApp;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
 
-// This function is required for static export with dynamic routes
 export async function generateStaticParams() {
-  const boatsRef = ref(database, 'boats');
+  const db = getDatabase(app);
+  const boatsRef = ref(db, 'boats');
   const snapshot = await get(boatsRef);
-  const boats = snapshot.val() || {};
-  
+  const boats = snapshot.val();
+
   return Object.keys(boats).map((id) => ({
     id: id,
   }));
 }
 
-// Your existing page component
-export default function Page({ params }: { params: { id: string } }) {
+interface BoatPageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function BoatPage({ params }: BoatPageProps) {
   return <BoatDetails params={params} />;
 }
