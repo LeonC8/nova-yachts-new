@@ -142,7 +142,7 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
 
       let mainPhotoUrl = formData.mainPhoto
       if (mainPhoto) {
-        const resizedMainPhoto = await resizeImage(mainPhoto, 1920, 1080);
+        const resizedMainPhoto = await resizeImage(mainPhoto, { maxSize: 1920 });
         const mainPhotoRef = storageRef(storage, `boat-images/main/${mainPhoto.name}`)
         await uploadBytes(mainPhotoRef, resizedMainPhoto)
         mainPhotoUrl = await getDownloadURL(mainPhotoRef)
@@ -151,7 +151,7 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
       const updatedOtherPhotoUrls = await Promise.all(
         otherPhotos.map(async (photo) => {
           if (photo.isNew && photo.file) {
-            const resizedFile = await resizeImage(photo.file, 1920, 1080);
+            const resizedFile = await resizeImage(photo.file, { maxSize: 1920 });
             const photoRef = storageRef(storage, `boat-images/other/${photo.file.name}`)
             await uploadBytes(photoRef, resizedFile)
             return getDownloadURL(photoRef)
