@@ -163,7 +163,10 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
   const handleImageUpload = async (file: File, path: string) => {
     try {
       // Resize image before upload
-      const resizedFile = await resizeImage(file, 1920, 1080); // Max dimensions
+      const resizedFile = await resizeImage(file, {
+        maxSize: 1920,
+        quality: 0.8
+      });
       
       const storage = getStorage();
       const storageRef = ref(storage, path);

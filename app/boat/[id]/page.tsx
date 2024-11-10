@@ -32,7 +32,7 @@ export async function generateStaticParams() {
     id: id,
   }));
 }
-  
+
 interface BoatPageProps {
   params: {
     id: string;
