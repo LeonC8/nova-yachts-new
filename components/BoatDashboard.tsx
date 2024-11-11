@@ -60,6 +60,11 @@ interface Boat {
   otherPhotos?: string[];
 }
 
+interface LoginState {
+  isLoggedIn: boolean;
+  expiresAt: number;
+}
+
 export function BoatDashboard() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loginError, setLoginError] = useState('')
@@ -70,10 +75,18 @@ export function BoatDashboard() {
   const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null)
 
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchBoats()
+    const loginState = localStorage.getItem('loginState');
+    if (loginState) {
+      const parsedState: LoginState = JSON.parse(loginState);
+      const currentTime = new Date().getTime();
+      
+      if (currentTime < parsedState.expiresAt) {
+        setIsLoggedIn(true);
+      } else {
+        localStorage.removeItem('loginState');
+      }
     }
-  }, [isLoggedIn])
+  }, []);
 
   const fetchBoats = async () => {
     try {
@@ -156,12 +169,24 @@ export function BoatDashboard() {
     const password = (e.currentTarget as any).password.value
 
     if (email === 'office@novayachts.eu' && password === 'numarine26XP') {
-      setIsLoggedIn(true)
-      setLoginError('')
+      const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+      const loginState: LoginState = {
+        isLoggedIn: true,
+        expiresAt: new Date().getTime() + thirtyDaysInMs
+      };
+      localStorage.setItem('loginState', JSON.stringify(loginState));
+      
+      setIsLoggedIn(true);
+      setLoginError('');
     } else {
-      setLoginError('Invalid credentials')
+      setLoginError('Invalid credentials');
     }
   }
+
+  const handleLogout = () => {
+    localStorage.removeItem('loginState');
+    setIsLoggedIn(false);
+  };
 
   const handleEditClick = (boat: Boat) => {
     setSelectedBoat(boat)
@@ -270,12 +295,20 @@ export function BoatDashboard() {
     <div className="max-w-7xl mx-auto p-4 sm:p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800">Boat Dashboard</h2>
-        <button
-          onClick={() => setView('add')}
-          className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Add New Boat
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setView('add')}
+            className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Add New Boat
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+          >
+            Logout
+          </button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
