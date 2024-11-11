@@ -65,8 +65,13 @@ interface LoginState {
   expiresAt: number;
 }
 
-export function BoatDashboard() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+// Add this to the component props
+interface BoatDashboardProps {
+  initialAuthState: boolean;
+}
+
+export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
+  const [isLoggedIn, setIsLoggedIn] = useState(initialAuthState)
   const [loginError, setLoginError] = useState('')
   const [boats, setBoats] = useState<Boat[]>([])
   const [loading, setLoading] = useState(true)
@@ -75,18 +80,10 @@ export function BoatDashboard() {
   const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null)
 
   useEffect(() => {
-    const loginState = localStorage.getItem('loginState');
-    if (loginState) {
-      const parsedState: LoginState = JSON.parse(loginState);
-      const currentTime = new Date().getTime();
-      
-      if (currentTime < parsedState.expiresAt) {
-        setIsLoggedIn(true);
-      } else {
-        localStorage.removeItem('loginState');
-      }
+    if (isLoggedIn) {
+      fetchBoats()
     }
-  }, []);
+  }, [isLoggedIn])
 
   const fetchBoats = async () => {
     try {
