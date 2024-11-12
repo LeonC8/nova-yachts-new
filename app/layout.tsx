@@ -4,6 +4,7 @@ import "./globals.css";
 import { GeistSans } from 'geist/font/sans';
 import { Analytics } from "@vercel/analytics/react";
 
+
 export const metadata: Metadata = {
   title: "Nova Yachts",
   description: "Premium yacht dealer in Croatia - Fairline and Numarine",
@@ -24,7 +25,8 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="https://res.cloudinary.com/dsgx9xiva/image/upload/v1660039653/nova-yachts/logo/Nova_Yachts_3_uqn6wk.png" />
       </head>
-      <body>{children}
+      <body className={`${GeistSans.className} antialiased`}>
+        {children}
         <Analytics />
       </body>
     </html>
