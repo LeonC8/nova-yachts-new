@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic' // This prevents static generation attempts
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const imageUrl = searchParams.get('url');
@@ -18,6 +16,7 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': response.headers.get('Content-Type') || 'image/jpeg',
         'Cache-Control': 'public, max-age=31536000',
+        'Vary': 'Accept',
       },
     });
   } catch (error) {
