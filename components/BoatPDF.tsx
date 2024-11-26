@@ -1,5 +1,4 @@
 import { jsPDF } from 'jspdf';
-import { getStorage, ref as storageRef, getDownloadURL } from 'firebase/storage';
 
 interface BoatDetails {
   name: string;
@@ -19,23 +18,47 @@ interface BoatDetails {
   propulsionType: string;
 }
 
-const IMAGE_WIDTH = 170; // Width in mm
-const IMAGE_HEIGHT = 100; // Height in mm
+// Constants for maximum dimensions
+const MAX_IMAGE_WIDTH = 170; // Max width in mm
+const MAX_IMAGE_HEIGHT = 100; // Max height in mm
+const GALLERY_IMAGE_MAX_WIDTH = 85; // Max width for gallery images
+const GALLERY_IMAGE_HEIGHT = 60; // Target height for gallery images
 
-const getImageFromURL = async (url: string): Promise<string> => {
-  // Convert Firebase Storage URL to download URL
-  if (url.includes('firebasestorage.googleapis.com')) {
-    const storage = getStorage();
-    const fileRef = storageRef(storage, url);
-    try {
-      const downloadURL = await getDownloadURL(fileRef);
-      return downloadURL;
-    } catch (error) {
-      console.error('Error getting download URL:', error);
-      return url;
-    }
+const getProxiedImageData = async (url: string): Promise<string> => {
+  try {
+    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error getting proxied image:', error);
+    throw error;
   }
-  return url;
+};
+
+// Helper function to calculate dimensions maintaining aspect ratio
+const calculateDimensions = (originalWidth: number, originalHeight: number, maxWidth: number, maxHeight: number) => {
+  let width = originalWidth;
+  let height = originalHeight;
+
+  // Scale down if width exceeds maximum
+  if (width > maxWidth) {
+    height = (height * maxWidth) / width;
+    width = maxWidth;
+  }
+
+  // Scale down if height still exceeds maximum
+  if (height > maxHeight) {
+    width = (width * maxHeight) / height;
+    height = maxHeight;
+  }
+
+  return { width, height };
 };
 
 export const generatePDF = async (boatDetails: BoatDetails) => {
@@ -56,38 +79,59 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
 
   // Header with main image
   try {
-    const mainPhotoURL = await getImageFromURL(boatDetails.mainPhoto);
+    const mainPhotoData = await getProxiedImageData(boatDetails.mainPhoto);
     
-    // Create an Image object
+    // Create temporary image to get dimensions
     const img = new Image();
-    img.crossOrigin = 'Anonymous';  // Enable CORS
-    
     await new Promise((resolve, reject) => {
       img.onload = resolve;
       img.onerror = reject;
-      img.src = mainPhotoURL;
+      img.src = mainPhotoData;
     });
 
+    // Calculate dimensions maintaining aspect ratio
+    const { width: imageWidth, height: imageHeight } = calculateDimensions(
+      img.width,
+      img.height,
+      MAX_IMAGE_WIDTH,
+      MAX_IMAGE_HEIGHT
+    );
+
+    // Center the image horizontally
+    const xPos = (pageWidth - imageWidth) / 2;
+
+    // Add rounded corners rectangle as background
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(
+      xPos - 2,
+      yPos - 2,
+      imageWidth + 4,
+      imageHeight + 4,
+      3,
+      3,
+      'F'
+    );
+
     doc.addImage(
-      img,
+      mainPhotoData,
       'JPEG',
-      (pageWidth - IMAGE_WIDTH) / 2,
+      xPos,
       yPos,
-      IMAGE_WIDTH,
-      IMAGE_HEIGHT,
+      imageWidth,
+      imageHeight,
       undefined,
       'MEDIUM'
     );
-    yPos += IMAGE_HEIGHT + 10;
+    yPos += imageHeight + 25;
   } catch (error) {
     console.error('Error adding main image:', error);
   }
 
-  // Title and Price Section
+  // Title and Price Section with more spacing
   doc.setFontSize(24);
   doc.setTextColor(primaryColor);
   doc.text(boatDetails.name, margin, yPos);
-  yPos += 10;
+  yPos += 12; // Increased spacing after title
 
   doc.setFontSize(16);
   doc.setTextColor(secondaryColor);
@@ -123,17 +167,34 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
   yPos += 10;
 
   // Description Section
+  const description = boatDetails.description.replace(/\\n/g, '\n');
+  const splitDescription = doc.splitTextToSize(description, contentWidth);
+  const descriptionHeight = splitDescription.length * 5;
+  const descriptionTitleHeight = 8; // Height of the title and spacing
+  const totalDescriptionHeight = descriptionHeight + descriptionTitleHeight;
+
+  // Check if description section will fit on current page
+  if (yPos + totalDescriptionHeight > doc.internal.pageSize.height - 30) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  // Now we're sure both title and text will fit on the same page
   doc.setFontSize(14);
   doc.setTextColor(primaryColor);
   doc.text('Description', margin, yPos);
-  yPos += 8;
+  yPos += descriptionTitleHeight;
 
   doc.setFontSize(10);
   doc.setTextColor(secondaryColor);
-  const description = boatDetails.description.replace(/\\n/g, '\n');
-  const splitDescription = doc.splitTextToSize(description, contentWidth);
   doc.text(splitDescription, margin, yPos);
-  yPos += splitDescription.length * 5 + 15;
+  yPos += descriptionHeight + 15;
+
+  // Check if equipment section needs a new page
+  if (yPos > doc.internal.pageSize.height - 100) {
+    doc.addPage();
+    yPos = 20;
+  }
 
   // Equipment Section
   doc.setFontSize(14);
@@ -182,25 +243,32 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
     yPos += 10;
 
     const imagesPerRow = 2;
-    const imageWidth = contentWidth / imagesPerRow - 5;
-    const imageHeight = 60;
+    const spacing = 10; // Space between images
 
     for (let i = 0; i < boatDetails.otherPhotos.length; i++) {
       try {
-        const photoURL = await getImageFromURL(boatDetails.otherPhotos[i]);
+        const photoData = await getProxiedImageData(boatDetails.otherPhotos[i]);
+        
+        // Create temporary image to get dimensions
         const img = new Image();
-        img.crossOrigin = 'Anonymous';
-
         await new Promise((resolve, reject) => {
           img.onload = resolve;
           img.onerror = reject;
-          img.src = photoURL;
+          img.src = photoData;
         });
 
-        const xPos = margin + (i % imagesPerRow) * (imageWidth + 5);
+        // Calculate dimensions maintaining aspect ratio
+        const { width: imageWidth, height: imageHeight } = calculateDimensions(
+          img.width,
+          img.height,
+          GALLERY_IMAGE_MAX_WIDTH,
+          GALLERY_IMAGE_HEIGHT
+        );
+
+        const xPos = margin + (i % imagesPerRow) * (GALLERY_IMAGE_MAX_WIDTH + spacing);
         
         doc.addImage(
-          img,
+          photoData,
           'JPEG',
           xPos,
           yPos,
@@ -211,10 +279,10 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
         );
 
         if ((i + 1) % imagesPerRow === 0) {
-          yPos += imageHeight + 10;
+          yPos += GALLERY_IMAGE_HEIGHT + spacing;
         }
 
-        if (yPos > doc.internal.pageSize.height - imageHeight - 20 && i < boatDetails.otherPhotos.length - 1) {
+        if (yPos > doc.internal.pageSize.height - GALLERY_IMAGE_HEIGHT - 20 && i < boatDetails.otherPhotos.length - 1) {
           doc.addPage();
           yPos = 15;
         }
