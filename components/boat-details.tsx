@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react'
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, X, Phone, Mail, MapPin, Calendar, Ruler, Anchor, Navigation } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Phone, Mail, MapPin, Calendar, Ruler, Anchor, Navigation, Download } from 'lucide-react'
 import { FixedNavbar } from './FixedNavbar'
 import { Footer } from './Footer'
 import { initializeApp, getApps, FirebaseApp } from "firebase/app"
 import { getDatabase, ref, get, Database } from 'firebase/database'
+import { getStorage } from 'firebase/storage'
 import { Navbar } from './Navbar'
 import { Loader } from './Loader'
 import Image from 'next/image'
+import { generatePDF } from './BoatPDF'
 
 // Firebase configuration
 const firebaseConfig = {
@@ -27,10 +29,12 @@ const firebaseConfig = {
 // Initialize Firebase  
 let app: FirebaseApp;
 let database: Database;
+let storage: any;
 
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
   database = getDatabase(app);
+  storage = getStorage(app);
 }
 
 interface BoatDetailsProps {
@@ -84,19 +88,20 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
       if (!database) {
         app = initializeApp(firebaseConfig);
         database = getDatabase(app);
+        storage = getStorage(app);
       }
 
-      scrollToTop(); // Scroll at start of fetch
+      scrollToTop();
       
       const boatRef = ref(database, `boats/${id}`);
       const snapshot = await get(boatRef);
       if (snapshot.exists()) {
-        setBoatDetails(snapshot.val());
+        const data = snapshot.val();
+        setBoatDetails(data);
       } else {
         console.log("No data available");
       }
       
-      // Small delay to ensure content is loaded before final scroll
       setTimeout(scrollToTop, 100);
       setIsLoading(false);
     };
@@ -380,6 +385,15 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
         )}
       </Dialog>
     </main>
+    <div className="container mx-auto px-4 md:px-20 mb-8">
+      <Button 
+        onClick={() => boatDetails && generatePDF(boatDetails)}
+        className="w-full md:w-auto flex items-center justify-center gap-2"
+      >
+        <Download className="h-4 w-4" />
+        Export to PDF
+      </Button>
+    </div>
     <Footer />
     </>
   )
