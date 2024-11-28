@@ -23,17 +23,49 @@ const MAX_IMAGE_WIDTH = 170; // Max width in mm
 const MAX_IMAGE_HEIGHT = 100; // Max height in mm
 const GALLERY_IMAGE_MAX_WIDTH = 85; // Max width for gallery images
 const GALLERY_IMAGE_HEIGHT = 60; // Target height for gallery images
+const IMAGE_QUALITY = 0.5; // Reduce image quality to 50%
+const MAX_GALLERY_IMAGES = 6; // Limit gallery images
+const CONCURRENT_REQUESTS = 3; // Number of concurrent image fetches
 
 const getProxiedImageData = async (url: string): Promise<string> => {
   try {
     const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl);
     const blob = await response.blob();
+
+    // Create a new compressed image
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        // Scale down large images
+        let { width, height } = img;
+        const MAX_SIZE = 1200;
+        if (width > MAX_SIZE || height > MAX_SIZE) {
+          if (width > height) {
+            height = (height * MAX_SIZE) / width;
+            width = MAX_SIZE;
+          } else {
+            width = (width * MAX_SIZE) / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Get compressed data URL
+        resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(blob);
     });
   } catch (error) {
     console.error('Error getting proxied image:', error);
@@ -61,11 +93,27 @@ const calculateDimensions = (originalWidth: number, originalHeight: number, maxW
   return { width, height };
 };
 
+// Add this helper function for batch processing
+const processBatch = async <T, R>(
+  items: T[],
+  batchSize: number,
+  processor: (item: T) => Promise<R>
+): Promise<R[]> => {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(processor));
+    results.push(...batchResults);
+  }
+  return results;
+};
+
 export const generatePDF = async (boatDetails: BoatDetails) => {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4'
+    format: 'a4',
+    compress: true // Enable PDF compression
   });
 
   // Set custom fonts and colors
@@ -243,11 +291,31 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
     yPos += 10;
 
     const imagesPerRow = 2;
-    const spacing = 10; // Space between images
+    const spacing = 10;
 
-    for (let i = 0; i < boatDetails.otherPhotos.length; i++) {
+    // Limit the number of gallery images
+    const galleryPhotos = boatDetails.otherPhotos.slice(0, MAX_GALLERY_IMAGES);
+
+    // Fetch and process images in parallel batches
+    const processedImages = await processBatch(
+      galleryPhotos,
+      CONCURRENT_REQUESTS,
+      async (photoUrl) => {
+        try {
+          return await getProxiedImageData(photoUrl);
+        } catch (error) {
+          console.error('Error processing image:', error);
+          return null;
+        }
+      }
+    );
+
+    // Filter out failed images
+    const validImages = processedImages.filter((img): img is string => img !== null);
+
+    for (let i = 0; i < validImages.length; i++) {
       try {
-        const photoData = await getProxiedImageData(boatDetails.otherPhotos[i]);
+        const photoData = validImages[i];
         
         // Create temporary image to get dimensions
         const img = new Image();
@@ -257,7 +325,6 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
           img.src = photoData;
         });
 
-        // Calculate dimensions maintaining aspect ratio
         const { width: imageWidth, height: imageHeight } = calculateDimensions(
           img.width,
           img.height,
@@ -275,14 +342,14 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
           imageWidth,
           imageHeight,
           undefined,
-          'MEDIUM'
+          'FAST' // Use faster compression
         );
 
         if ((i + 1) % imagesPerRow === 0) {
           yPos += GALLERY_IMAGE_HEIGHT + spacing;
         }
 
-        if (yPos > doc.internal.pageSize.height - GALLERY_IMAGE_HEIGHT - 20 && i < boatDetails.otherPhotos.length - 1) {
+        if (yPos > doc.internal.pageSize.height - GALLERY_IMAGE_HEIGHT - 20 && i < validImages.length - 1) {
           doc.addPage();
           yPos = 15;
         }
