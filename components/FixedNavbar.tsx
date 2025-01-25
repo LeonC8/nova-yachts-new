@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { X, ArrowLeft, Phone, Mail } from 'lucide-react'
+import { X, ArrowLeft, Phone, Mail, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -36,12 +36,13 @@ export function FixedNavbar() {
               </Link>
             </div>
             <div className="hidden md:flex items-center space-x-4">
-              <a href="tel:+38598301987" className="text-current hover:text-gray-600 mr-2">
-                <Phone className="w-5 h-5" />
-              </a>
-              <a href="mailto:office@novayachts.eu" className="text-current hover:text-gray-600">
-                <Mail className="w-5 h-5" />
-              </a>
+              <Link 
+                href="/contact" 
+                className="bg-slate-800 text-white px-5 py-2 rounded-full hover:bg-gray-800 transition-colors flex items-center space-x-2"
+              >
+                <span>Contact</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
             <button className="md:hidden" onClick={toggleSidebar}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

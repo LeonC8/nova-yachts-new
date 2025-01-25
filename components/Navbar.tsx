@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { X, Phone, Mail, ArrowLeft, Facebook } from 'lucide-react'
+import { X, Phone, Mail, ArrowLeft, Facebook, Instagram, ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -62,20 +62,31 @@ export function Navbar({ transparentOnTop = true }: NavbarProps) {
               className={logoClasses}
             />
             <div className="hidden md:flex items-center space-x-4">
-              <a href="tel:+38598301987" className="text-current hover:text-gray-300 mr-2">
-                <Phone className="w-5 h-5" />
-              </a>
-              <a href="mailto:office@novayachts.eu" className="text-current hover:text-gray-300 mr-2">
-                <Mail className="w-5 h-5" />
-              </a>
               <a 
                 href="https://www.facebook.com/novayachts.eu/" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="text-current hover:text-gray-300"
+                className="text-current hover:text-gray-300 opacity-60 hover:opacity-100 transition-opacity"
               >
                 <Facebook className="w-5 h-5" />
               </a>
+              <button 
+                className="text-current hover:text-gray-300 opacity-60 hover:opacity-100 transition-opacity mr-4 cursor-not-allowed"
+                disabled
+              >
+                <Instagram className="w-5 h-5" />
+              </button>
+              <Link 
+                href="/contact" 
+                className={`px-5 py-1 rounded-full transition-colors flex items-center space-x-2 ${
+                  isScrolled || !transparentOnTop
+                    ? 'bg-slate-800 text-white hover:bg-gray-800 border border-slate-800'
+                    : 'border border-white/70 text-white hover:bg-white hover:text-black'
+                }`}
+              >
+                <span>Contact</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
             <button className="md:hidden" onClick={toggleSidebar}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

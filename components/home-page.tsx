@@ -9,6 +9,7 @@ import { getDatabase, ref, onValue, Database } from 'firebase/database'
 import { useRouter } from 'next/navigation'
 import { Loader } from './Loader'
 import { ArrowRight, X, Phone, Mail, MapPin } from 'lucide-react'
+import Image from 'next/image'
 
 // Firebase configuration
 const firebaseConfig = {
@@ -192,11 +193,15 @@ export function HomePageComponent() {
                   index === currentSlide ? 'opacity-100' : 'opacity-0'
                 }`}
               >
-                <img 
+                <Image 
                   src={img} 
                   alt={`Slide ${index + 1}`} 
                   className="w-full h-full object-cover"
                   onLoad={handleImageLoad}
+                  fill
+                  priority={index === 0}
+                  quality={75}
+                  sizes="100vw"
                 />
                 <div className="absolute inset-0 bg-black opacity-60"></div>
               </div>
@@ -239,11 +244,16 @@ export function HomePageComponent() {
                 className="relative rounded shadow-md overflow-hidden cursor-pointer group bg-gray-200"
               >
                 <div className="absolute inset-0 bg-black opacity-50"></div>
-                <img 
+                <Image 
                   src={brand.image} 
                   alt={`${brand.title} Yacht`} 
                   className="w-full h-48 md:h-96 object-cover"
                   onLoad={handleImageLoad}
+                  width={800}
+                  height={600}
+                  quality={75}
+                  priority={index === 0}
+                  sizes="(max-width: 768px) 100vw, 50vw"
                 />
                 <div className="absolute inset-0 flex flex-col justify-end p-6">
                   <div className="flex justify-between items-center w-full text-white">
@@ -285,11 +295,15 @@ export function HomePageComponent() {
                   {yacht.basicListing !== 'yes' ? (
                     <Link href={`/boat/${yacht.id}`}>
                       <div className="relative">
-                        <img 
+                        <Image 
                           src={yacht.mainPhoto} 
                           alt={yacht.name} 
                           className="w-full h-48 md:h-64 object-cover"
                           onLoad={handleImageLoad}
+                          width={400}
+                          height={300}
+                          quality={75}
+                          sizes="(max-width: 768px) 100vw, 33vw"
                         />
                         <div className="p-4">
                           <div className="flex justify-between items-start">
@@ -309,11 +323,15 @@ export function HomePageComponent() {
                       onClick={() => setIsContactOverlayOpen(true)} 
                       className="cursor-pointer"
                     >
-                      <img 
+                      <Image 
                         src={yacht.mainPhoto} 
                         alt={yacht.name} 
                         className="w-full h-48 md:h-64 object-cover"
                         onLoad={handleImageLoad}
+                        width={400}
+                        height={300}
+                        quality={75}
+                        sizes="(max-width: 768px) 100vw, 33vw"
                       />
                       <div className="p-4">
                         <h3 className="text-md font-medium mb-2">{yacht.name}</h3>
@@ -348,16 +366,20 @@ export function HomePageComponent() {
           </div>
           <div className="relative">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {preOwnedYachts.map((yacht) => (
+              {preOwnedYachts.slice(0, 3).map((yacht) => (
                 <div key={yacht.id} className={`bg-white rounded border shadow-sm border-gray-200 overflow-hidden ${yacht.basicListing !== 'yes' ? 'cursor-pointer' : ''}`}>
                   {yacht.basicListing !== 'yes' ? (
                     <Link href={`/boat/${yacht.id}`}>
                       <div className="relative">
-                        <img 
+                        <Image 
                           src={yacht.mainPhoto} 
                           alt={yacht.name} 
                           className="w-full h-48 md:h-64 object-cover"
                           onLoad={handleImageLoad}
+                          width={400}
+                          height={300}
+                          quality={75}
+                          sizes="(max-width: 768px) 100vw, 33vw"
                         />
                         <div className="p-4">
                           <div className="flex justify-between items-start">
@@ -377,11 +399,15 @@ export function HomePageComponent() {
                       onClick={() => setIsContactOverlayOpen(true)} 
                       className="cursor-pointer"
                     >
-                      <img 
+                      <Image 
                         src={yacht.mainPhoto} 
                         alt={yacht.name} 
                         className="w-full h-48 md:h-64 object-cover"
                         onLoad={handleImageLoad}
+                        width={400}
+                        height={300}
+                        quality={75}
+                        sizes="(max-width: 768px) 100vw, 33vw"
                       />
                       <div className="p-4">
                         <h3 className="text-md font-medium mb-2">{yacht.name}</h3>
@@ -393,6 +419,16 @@ export function HomePageComponent() {
                 </div>
               ))}
             </div>
+            {preOwnedYachts.length > 3 && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={() => handleViewAll('/pre-owned')}
+                  className="px-6 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  See all ({preOwnedYachts.length})
+                </button>
+              </div>
+            )}
           </div>
         </section>
         </div>

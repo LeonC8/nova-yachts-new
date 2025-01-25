@@ -388,7 +388,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
     <div className="container mx-auto px-4 md:px-20 mb-8">
       <Button 
         onClick={() => boatDetails && generatePDF(boatDetails)}
-        className="w-full md:w-auto flex items-center justify-center gap-2"
+        className="w-full md:w-auto flex items-center justify-center gap-2 bg-white-800 text-gray-800 border border-gray-300 rounded-md"
       >
         <Download className="h-4 w-4" />
         Export to PDF
