@@ -235,14 +235,14 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-300 px-4 py-4 flex flex-col justify-between h-full">
                 <div className="text-md font-medium text-gray-700 mb-4">{boatDetails.year}</div>
                 <div className="flex items-center text-sm text-gray-500">
-                  {/* <Calendar className="h-4 w-4 text-gray-500 mr-2" /> */}
+                  <Calendar className="h-4 w-4 text-gray-500 mr-2" />
                   <span>Year</span>
                 </div>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-300 px-4 py-4 flex flex-col justify-between h-full">
                 <div className="text-md font-medium text-gray-700 mb-4">{boatDetails.sizeMeters}m</div>
                 <div className="flex items-center text-sm text-gray-500">
-                  {/* <Ruler className="h-4 w-4 text-gray-500 mr-2" /> */}
+                  <Ruler className="h-4 w-4 text-gray-500 mr-2" />
                   <span>Length</span>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
               <div className="col-span-2 bg-white p-3 rounded-lg shadow-sm border border-gray-300 px-4 py-4 flex flex-col justify-between h-full">
                 <div className="text-md font-medium text-gray-700 mb-4">{boatDetails.engines}</div>
                 <div className="flex items-center text-sm text-gray-500">
-                  {/*  */}
+                  <Anchor className="h-4 w-4 text-gray-500 mr-2" />
                   <span>Engines</span>
                 </div>
               </div>
@@ -316,7 +316,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
                 </div>
                 <div className="flex items-center">
                   <Phone className="h-5 w-5 text-gray-800 mr-4" />
-                  <span className="text-gray-600 text-sm">+385 95 521 6033</span>
+                  <span className="text-gray-600 text-sm">+385 98 301 987</span>
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 text-gray-800 mr-4" />

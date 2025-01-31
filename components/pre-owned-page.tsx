@@ -68,7 +68,7 @@ function ContactOverlay({ isOpen, onClose }: ContactOverlayProps) {
           </div>
           <div className="flex items-center">
             <Phone className="h-5 w-5 text-gray-800 mr-4" />
-            <span className="text-gray-600 text-sm">+385 95 521 6033</span>
+            <span className="text-gray-600 text-sm">+385 98 301 987</span>
           </div>
           <div className="flex items-center">
             <Mail className="h-5 w-5 text-gray-800 mr-4" />

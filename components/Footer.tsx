@@ -29,7 +29,7 @@ export function Footer() {
           <div>
             <h3 className="text-lg  font-medium mb-4">Contact Us</h3>
             <p className="text-gray-300 text-sm mb-2">Hribarov Prilaz 10, Zagreb, Croatia</p>
-            <p className="text-gray-300 text-sm mb-2">Phone: +385 95 521 6033</p>
+            <p className="text-gray-300 text-sm mb-2">Phone: +385 98 301 987</p>
             <p className="text-gray-300 text-sm mb-2"> Email: office@novayachts.eu</p>
           </div>
         </div>
