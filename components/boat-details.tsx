@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, X, Phone, Mail, MapPin, Calendar, Ruler, Anchor, Navigation, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Phone, Mail, MapPin, Calendar, Ruler, Anchor, Navigation, Download, Send } from 'lucide-react'
 import { FixedNavbar } from './FixedNavbar'
 import { Footer } from './Footer'
 import { initializeApp, getApps, FirebaseApp } from "firebase/app"
@@ -13,6 +13,9 @@ import { Navbar } from './Navbar'
 import { Loader } from './Loader'
 import Image from 'next/image'
 import { generatePDF } from './BoatPDF'
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { SuccessModal } from "@/components/ui/success-modal"
 
 // Firebase configuration
 const firebaseConfig = {
@@ -65,6 +68,13 @@ const parseDescription = (description: string) => {
   return description.replace(/\\n/g, '\n');
 };
 
+interface ContactFormData {
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+}
+
 export default function BoatDetails({ params }: BoatDetailsProps) {
   const { id } = params;
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -72,7 +82,11 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [boatDetails, setBoatDetails] = useState<BoatDetails | null>(null)
-  const [isLoading, setIsLoading] = useState(true) // Add loading state
+  const [isLoading, setIsLoading] = useState(true)
+  const [isPdfLoading, setIsPdfLoading] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [formStatus, setFormStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   useEffect(() => {
     const scrollToTop = () => {
@@ -151,6 +165,56 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
     setTouchEnd(null)
   }
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsSending(true)
+    setFormStatus('idle')
+
+    const form = e.currentTarget
+    const formData: ContactFormData = {
+      name: form.name.value,
+      email: form.email.value,
+      phone: form.phone.value,
+      message: form.message.value
+    }
+
+    try {
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          boatName: boatDetails?.name,
+          boatId: id
+        }),
+      })
+
+      if (response.ok) {
+        setFormStatus('success')
+        form.reset()
+        setShowSuccessModal(true)
+      } else {
+        setFormStatus('error')
+      }
+    } catch (error) {
+      setFormStatus('error')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handlePdfGeneration = async () => {
+    if (!boatDetails || isPdfLoading) return;
+    setIsPdfLoading(true);
+    try {
+      await generatePDF(boatDetails);
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
+
   if (isLoading) {
     return <Loader />;
   }
@@ -165,10 +229,24 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
     <>
     <Navbar transparentOnTop={false} />
     <main className="container mx-auto px-4 py-3 md:pt-6 overflow-x-hidden md:px-20">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-8 mt-4">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-8 mt-2 md:mt-4">
         <div>
-          <p className="text-xs font-semibold text-slate-500 mb-2">{boatDetails.condition.toUpperCase()}</p>
-          <h1 className="text-3xl font-serif mt-5 text-gray-800">{boatDetails.name}</h1>
+          <div className="flex justify-between items-center">
+            <p className="text-xs font-medium text-gray-500 mb-0 tracking-wider">{boatDetails.condition.toUpperCase()}</p>
+            <Button 
+              onClick={handlePdfGeneration}
+              className="md:hidden flex items-center justify-center bg-white text-gray-800 border border-gray-300 rounded-md w-8 h-8 p-0 hover:bg-white active:bg-white"
+              size="icon"
+              disabled={isPdfLoading}
+            >
+              {isPdfLoading ? (
+                <div className="animate-spin h-3 w-3 border-2 border-gray-500 border-t-transparent rounded-full" />
+              ) : (
+                <Download className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
+          <h1 className="text-3xl font-serif mt-3 text-gray-800">{boatDetails.name}</h1>
           <p className="text-sm font-normal text-gray-600 mt-4 md:hidden">
             € {Number(boatDetails.price).toLocaleString()} 
             {boatDetails.taxStatus === 'paid' ? ' (VAT Paid)' : ' (VAT Not Paid)'}  
@@ -312,16 +390,72 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
               <div className="space-y-4">
                 <div className="flex items-center">
                   <MapPin className="h-5 w-5 text-gray-800 mr-4" />
-                  <span className="text-gray-600 text-sm">Hribarov Prilaz 10, Zagreb, Croatia</span>
+                  <span className="text-gray-500 text-sm">Hribarov Prilaz 10, Zagreb, Croatia</span>
                 </div>
                 <div className="flex items-center">
                   <Phone className="h-5 w-5 text-gray-800 mr-4" />
-                  <span className="text-gray-600 text-sm">+385 98 301 987</span>
+                  <span className="text-gray-500 text-sm">+385 98 301 987</span>
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 text-gray-800 mr-4" />
-                  <span className="text-gray-600 text-sm">office@novayachts.eu</span>
+                  <span className="text-gray-500 text-sm">office@novayachts.eu</span>
                 </div>
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Send us a message</h3>
+                <p className="text-sm text-gray-500 mb-4">We will get back to you as soon as possible.</p>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Input
+                      type="text"
+                      name="name"
+                      placeholder="Your name"
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="email"
+                      name="email"
+                      placeholder="Your email"
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="tel"
+                      name="phone"
+                      placeholder="Your phone number"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <Textarea
+                      name="message"
+                      placeholder="Your message"
+                      required
+                      className="w-full min-h-[100px]"
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-slate-800 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+                    disabled={isSending}
+                  >
+                    {isSending ? 'Sending...' : (
+                      <>
+                        <span>Send Message</span>
+                        <Send className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                  {formStatus === 'error' && (
+                    <p className="text-red-600 text-sm">Failed to send message. Please try again.</p>
+                  )}
+                </form>
               </div>
             </section>
 
@@ -385,16 +519,25 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
         )}
       </Dialog>
     </main>
-    <div className="container mx-auto px-4 md:px-20 mb-8">
+    <div className="container mx-auto px-4 md:px-20 mb-8 hidden md:block">
       <Button 
-        onClick={() => boatDetails && generatePDF(boatDetails)}
-        className="w-full md:w-auto flex items-center justify-center gap-2 bg-white-800 text-gray-800 border border-gray-300 rounded-md"
+        onClick={handlePdfGeneration}
+        className="w-full md:w-auto flex items-center justify-center gap-2 bg-white text-gray-800 border border-gray-300 rounded-md hover:bg-white hover:shadow-md transition-shadow duration-200"
+        disabled={isPdfLoading}
       >
-        <Download className="h-4 w-4" />
-        Export to PDF
+        {isPdfLoading ? (
+          <div className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full" />
+        ) : (
+          <Download className="h-4 w-4" />
+        )}
+        {isPdfLoading ? 'Preparing PDF...' : 'Export to PDF'}
       </Button>
     </div>
     <Footer />
+    <SuccessModal 
+      open={showSuccessModal} 
+      onClose={() => setShowSuccessModal(false)} 
+    />
     </>
   )
 }

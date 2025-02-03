@@ -42,8 +42,8 @@ export function Navbar({ transparentOnTop = true }: NavbarProps) {
   const logoClasses = `h-10 md:h-12 w-auto ${(isScrolled || !transparentOnTop) ? 'invert opacity-80' : ''}`
 
   const navLinkClasses = transparentOnTop
-    ? `${isScrolled ? 'text-gray-700' : 'text-gray-200'}`
-    : 'text-gray-700'
+    ? `${isScrolled ? 'text-gray-600' : 'text-gray-200'}`
+    : 'text-gray-600'
 
   const dividerClasses = transparentOnTop
     ? `fixed left-0 right-0 md:mt-2 h-px ${isScrolled ? 'bg-gray-200' : 'bg-white bg-opacity-30'}`
@@ -53,32 +53,50 @@ export function Navbar({ transparentOnTop = true }: NavbarProps) {
     <>
       <header className={headerClasses}>
         <div className="container mx-auto px-4 xl:px-20">
-          <div className="flex justify-between items-center py-4">
-            <Image 
-              src="https://res.cloudinary.com/dsgx9xiva/image/upload/v1729932049/nova-yachts/logo/nova-yachts_wrtrr2_fkh4xk.png"
-              alt="NovaYachts Logo"
-              width={150}
-              height={20}
-              className={logoClasses}
-            />
-            <div className="hidden md:flex items-center space-x-4">
-              <a 
-                href="https://www.facebook.com/novayachts.eu/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-current hover:text-gray-300 opacity-60 hover:opacity-100 transition-opacity"
-              >
-                <Facebook className="w-5 h-5" />
-              </a>
-              <button 
-                className="text-current hover:text-gray-300 opacity-60 hover:opacity-100 transition-opacity mr-4 cursor-not-allowed"
-                disabled
-              >
-                <Instagram className="w-5 h-5" />
-              </button>
+          <div className="flex items-center py-4">
+            <button className="md:hidden mr-3" onClick={toggleSidebar}>
+              <svg className={`w-5 h-5 ${isScrolled || !transparentOnTop ? 'text-gray-800' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div className="flex-1 flex items-center">
+              <Image 
+                src="https://res.cloudinary.com/dsgx9xiva/image/upload/v1729932049/nova-yachts/logo/nova-yachts_wrtrr2_fkh4xk.png"
+                alt="NovaYachts Logo"
+                width={150}
+                height={20}
+                className={`${logoClasses} mr-auto mb-1`}
+              />
+              <div className="hidden md:flex items-center space-x-4">
+                <a 
+                  href="https://www.facebook.com/novayachts.eu/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-current hover:text-gray-300 opacity-60 hover:opacity-100 transition-opacity"
+                >
+                  <Facebook className="w-5 h-5" />
+                </a>
+                <button 
+                  className="text-current hover:text-gray-300 opacity-60 hover:opacity-100 transition-opacity mr-4 cursor-not-allowed"
+                  disabled
+                >
+                  <Instagram className="w-5 h-5" />
+                </button>
+                <Link 
+                  href="/contact" 
+                  className={`px-5 py-1 rounded-full transition-colors flex items-center space-x-2 ${
+                    isScrolled || !transparentOnTop
+                      ? 'bg-slate-800 text-white hover:bg-gray-800 border border-slate-800'
+                      : 'border border-white/70 text-white hover:bg-white hover:text-black'
+                  }`}
+                >
+                  <span className="text-xs">Contact</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
               <Link 
-                href="/contact" 
-                className={`px-5 py-1 rounded-full transition-colors flex items-center space-x-2 ${
+                href="/contact"
+                className={`md:hidden px-4 py-1 rounded-full transition-colors flex items-center space-x-2 ${
                   isScrolled || !transparentOnTop
                     ? 'bg-slate-800 text-white hover:bg-gray-800 border border-slate-800'
                     : 'border border-white/70 text-white hover:bg-white hover:text-black'
@@ -88,15 +106,10 @@ export function Navbar({ transparentOnTop = true }: NavbarProps) {
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
-            <button className="md:hidden" onClick={toggleSidebar}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
           </div>  
-          <nav className={`flex overflow-x-auto space-x-4 py-3 ${navLinkClasses} items-center`}>
+          <nav className={`flex overflow-x-auto space-x-4 pb-3 pt-2  ${navLinkClasses} items-center`}>
             {!transparentOnTop && (
-              <button 
+              <button   
                 onClick={handleGoBack}
                 className="p-1 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors duration-200 flex-shrink-0 border border-gray-200 shadow-sm"
                 aria-label="Go back"
