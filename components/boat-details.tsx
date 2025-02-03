@@ -75,6 +75,17 @@ interface ContactFormData {
   message: string;
 }
 
+interface FormElements extends HTMLFormControlsCollection {
+  name: HTMLInputElement;
+  email: HTMLInputElement;
+  phone: HTMLInputElement;
+  message: HTMLTextAreaElement;
+}
+
+interface ContactForm extends HTMLFormElement {
+  readonly elements: FormElements;
+}
+
 export default function BoatDetails({ params }: BoatDetailsProps) {
   const { id } = params;
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -165,17 +176,17 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
     setTouchEnd(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<ContactForm>) => {
     e.preventDefault()
     setIsSending(true)
     setFormStatus('idle')
 
     const form = e.currentTarget
     const formData: ContactFormData = {
-      name: form.name.value,
-      email: form.email.value,
-      phone: form.phone.value,
-      message: form.message.value
+      name: form.elements.name.value,
+      email: form.elements.email.value,
+      phone: form.elements.phone.value,
+      message: form.elements.message.value
     }
 
     try {
