@@ -9,22 +9,33 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { SuccessModal } from "@/components/ui/success-modal"
 
+interface FormElements extends HTMLFormControlsCollection {
+  name: HTMLInputElement;
+  email: HTMLInputElement;
+  phone: HTMLInputElement;
+  message: HTMLTextAreaElement;
+}
+
+interface ContactForm extends HTMLFormElement {
+  readonly elements: FormElements;
+}
+
 export default function ContactPage() {
   const [isSending, setIsSending] = useState(false)
   const [formStatus, setFormStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<ContactForm>) => {
     e.preventDefault()
     setIsSending(true)
     setFormStatus('idle')
 
     const form = e.currentTarget
     const formData = {
-      name: form.name.value,
-      email: form.email.value,
-      phone: form.phone.value,
-      message: form.message.value
+      name: form.elements.name.value,
+      email: form.elements.email.value,
+      phone: form.elements.phone.value,
+      message: form.elements.message.value
     }
 
     try {
