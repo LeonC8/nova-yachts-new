@@ -401,7 +401,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
               <div className="space-y-4">
                 <div className="flex items-center">
                   <MapPin className="h-5 w-5 text-gray-800 mr-4" />
-                  <span className="text-gray-500 text-sm">Hribarov Prilaz 10, Zagreb, Croatia</span>
+                  <span className="text-gray-500 text-sm">Gomboševa 28, Zagreb, Croatia</span>
                 </div>
                 <div className="flex items-center">
                   <Phone className="h-5 w-5 text-gray-800 mr-4" />
