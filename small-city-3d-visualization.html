@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Small City 3D Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+    </style>
+    <!-- Add import map to properly resolve the modules -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="info">Small City 3D Visualization<br>Use mouse to rotate, scroll to zoom, right-click to pan</div>
+    
+    <!-- Import Three.js using ES modules with proper import specifiers -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        
+        // Set up the scene, camera, and renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(30, 30, 30);
+        camera.lookAt(0, 0, 0);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Add orbit controls for navigation
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Create ground/street grid
+        const gridSize = 50;
+        const gridDivisions = 10;
+        const gridHelper = new THREE.GridHelper(gridSize, gridDivisions);
+        scene.add(gridHelper);
+        
+        // Create a ground plane
+        const groundGeometry = new THREE.PlaneGeometry(gridSize, gridSize);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x1a5e1a,  // Dark green
+            roughness: 0.8
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        // Function to create a building
+        function createBuilding(x, z, width, height, depth, color) {
+            const geometry = new THREE.BoxGeometry(width, height, depth);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: color,
+                roughness: 0.7
+            });
+            const building = new THREE.Mesh(geometry, material);
+            building.position.set(x, height/2, z);
+            building.castShadow = true;
+            building.receiveShadow = true;
+            scene.add(building);
+            
+            // Add some windows
+            addWindows(building, width, height, depth);
+            
+            return building;
+        }
+        
+        // Function to add windows to a building
+        function addWindows(building, width, height, depth) {
+            const windowGeometry = new THREE.PlaneGeometry(0.5, 0.8);
+            const windowMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xadd8e6, // Light blue
+                emissive: 0x555555,
+                roughness: 0.2
+            });
+            
+            // Front windows
+            const windowsPerFloor = Math.floor(width / 2);
+            const floors = Math.floor(height / 3);
+            
+            for (let floor = 0; floor < floors; floor++) {
+                for (let i = 0; i < windowsPerFloor; i++) {
+                    const windowMesh = new THREE.Mesh(windowGeometry, windowMaterial);
+                    windowMesh.position.x = (i * 2) - (width / 2) + 1;
+                    windowMesh.position.y = (floor * 3) - (height / 2) + 2;
+                    windowMesh.position.z = depth / 2 + 0.01;
+                    building.add(windowMesh);
+                    
+                    // Back windows
+                    const backWindow = windowMesh.clone();
+                    backWindow.rotation.y = Math.PI;
+                    backWindow.position.z = -depth / 2 - 0.01;
+                    building.add(backWindow);
+                }
+            }
+            
+            // Side windows
+            const sideWindowsPerFloor = Math.floor(depth / 2);
+            
+            for (let floor = 0; floor < floors; floor++) {
+                for (let i = 0; i < sideWindowsPerFloor; i++) {
+                    const windowMesh = new THREE.Mesh(windowGeometry, windowMaterial);
+                    windowMesh.rotation.y = Math.PI / 2;
+                    windowMesh.position.x = width / 2 + 0.01;
+                    windowMesh.position.y = (floor * 3) - (height / 2) + 2;
+                    windowMesh.position.z = (i * 2) - (depth / 2) + 1;
+                    building.add(windowMesh);
+                    
+                    // Other side windows
+                    const otherSideWindow = windowMesh.clone();
+                    otherSideWindow.rotation.y = -Math.PI / 2;
+                    otherSideWindow.position.x = -width / 2 - 0.01;
+                    building.add(otherSideWindow);
+                }
+            }
+        }
+        
+        // Create roads
+        function createRoad() {
+            const roadGeometry = new THREE.PlaneGeometry(50, 10);
+            const roadMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x333333, // Dark gray
+                roughness: 0.9
+            });
+            
+            // Horizontal road
+            const horizontalRoad = new THREE.Mesh(roadGeometry, roadMaterial);
+            horizontalRoad.rotation.x = -Math.PI / 2;
+            horizontalRoad.position.y = 0.01; // Slightly above ground to prevent z-fighting
+            scene.add(horizontalRoad);
+            
+            // Vertical road
+            const verticalRoad = new THREE.Mesh(roadGeometry, roadMaterial);
+            verticalRoad.rotation.x = -Math.PI / 2;
+            verticalRoad.rotation.z = Math.PI / 2;
+            verticalRoad.position.y = 0.01;
+            scene.add(verticalRoad);
+            
+            // Road markings
+            const lineGeometry = new THREE.PlaneGeometry(50, 0.4);
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            
+            const horizontalLine = new THREE.Mesh(lineGeometry, lineMaterial);
+            horizontalLine.rotation.x = -Math.PI / 2;
+            horizontalLine.position.y = 0.02;
+            scene.add(horizontalLine);
+            
+            const verticalLine = new THREE.Mesh(lineGeometry, lineMaterial);
+            verticalLine.rotation.x = -Math.PI / 2;
+            verticalLine.rotation.z = Math.PI / 2;
+            verticalLine.position.y = 0.02;
+            scene.add(verticalLine);
+        }
+        
+        // Create various buildings
+        createRoad();
+        
+        // Quadrant 1
+        createBuilding(-15, -15, 5, 12, 5, 0xb0c4de); // Building 1
+        createBuilding(-10, -20, 7, 20, 7, 0xd3d3d3); // Building 2
+        createBuilding(-18, -8, 4, 8, 4, 0xe6e6fa);   // Building 3
+        
+        // Quadrant 2
+        createBuilding(15, -15, 10, 15, 8, 0xffd700); // Building 4
+        createBuilding(18, -20, 5, 10, 5, 0xf08080);  // Building 5
+        
+        // Quadrant 3
+        createBuilding(-12, 12, 8, 25, 8, 0x98fb98);  // Building 6
+        createBuilding(-18, 18, 6, 12, 6, 0xf5f5dc);  // Building 7
+        
+        // Quadrant 4
+        createBuilding(15, 15, 12, 18, 10, 0xffa07a); // Building 8
+        createBuilding(18, 8, 5, 8, 5, 0xffb6c1);     // Building 9
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(30, 50, 30);
+        directionalLight.castShadow = true;
+        
+        // Improve shadow quality
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 500;
+        
+        // Set shadow camera limits
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
+        
+        scene.add(directionalLight);
+        
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Function to create a car
+        function createCar(x, z, color, direction = 0) {
+            const car = new THREE.Group();
+            
+            // Car body
+            const bodyGeometry = new THREE.BoxGeometry(2, 1, 4);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: color,
+                roughness: 0.5,
+                metalness: 0.6
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.5;
+            car.add(body);
+            
+            // Car top
+            const topGeometry = new THREE.BoxGeometry(1.5, 0.8, 2);
+            const top = new THREE.Mesh(topGeometry, bodyMaterial);
+            top.position.y = 1.4;
+            top.position.z = -0.3;
+            car.add(top);
+            
+            // Wheels
+            const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.4, 16);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x202020,
+                roughness: 0.8
+            });
+            
+            // Front wheels
+            const wheelFL = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheelFL.rotation.z = Math.PI / 2;
+            wheelFL.position.set(-1.1, 0.4, -1.2);
+            car.add(wheelFL);
+            
+            const wheelFR = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheelFR.rotation.z = Math.PI / 2;
+            wheelFR.position.set(1.1, 0.4, -1.2);
+            car.add(wheelFR);
+            
+            // Back wheels
+            const wheelBL = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheelBL.rotation.z = Math.PI / 2;
+            wheelBL.position.set(-1.1, 0.4, 1.2);
+            car.add(wheelBL);
+            
+            const wheelBR = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheelBR.rotation.z = Math.PI / 2;
+            wheelBR.position.set(1.1, 0.4, 1.2);
+            car.add(wheelBR);
+            
+            // Add headlights
+            const headlightGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.1);
+            const headlightMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffcc,
+                emissive: 0xffffcc,
+                emissiveIntensity: 0.5
+            });
+            
+            const headlightL = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            headlightL.position.set(-0.7, 0.5, -2);
+            car.add(headlightL);
+            
+            const headlightR = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            headlightR.position.set(0.7, 0.5, -2);
+            car.add(headlightR);
+            
+            // Position the car
+            car.position.set(x, 0, z);
+            car.rotation.y = direction;
+            car.castShadow = true;
+            car.receiveShadow = true;
+            
+            scene.add(car);
+            return car;
+        }
+        
+        // Create cars on the roads
+        const cars = [
+            createCar(-15, 0, 0xff0000), // Red car on horizontal road
+            createCar(10, 0, 0x00ff00),  // Green car on horizontal road
+            createCar(0, -12, 0x0000ff, Math.PI/2),  // Blue car on vertical road
+            createCar(0, 15, 0xffff00, Math.PI/2),   // Yellow car on vertical road
+            createCar(-5, 0, 0xff00ff),  // Purple car on horizontal road
+        ];
+        
+        // Add car animation
+        let carPositions = cars.map(car => ({
+            x: car.position.x,
+            z: car.position.z,
+            speed: 0.1 + Math.random() * 0.1, // Random speed for each car
+            direction: Math.abs(car.rotation.y) > 0.1 ? 'vertical' : 'horizontal'
+        }));
+        
+        // Modify the animation loop to include car movement
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update car positions
+            cars.forEach((car, index) => {
+                if (carPositions[index].direction === 'horizontal') {
+                    // Move horizontally
+                    carPositions[index].x += carPositions[index].speed;
+                    if (carPositions[index].x > 25) {
+                        carPositions[index].x = -25;
+                    }
+                    car.position.x = carPositions[index].x;
+                } else {
+                    // Move vertically
+                    carPositions[index].z += carPositions[index].speed;
+                    if (carPositions[index].z > 25) {
+                        carPositions[index].z = -25;
+                    }
+                    car.position.z = carPositions[index].z;
+                }
+            });
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html> 

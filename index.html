@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Revenue Visualization</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="container"></div>
+    <div id="tooltip"></div>
+    <div id="loading">Loading...</div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-geo@3.0.1/dist/d3-geo.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3.0.0/dist/d3-scale-chromatic.min.js"></script>
+    <script src="main.js"></script>
+    <script src="https://ask-whisper-h9d347y3t-leonc8s-projects.vercel.app/chatbot-widget.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    initChatWidget({
+      welcomeMessage: "👋 Hi there! How can I help you today?",
+      primaryColor: "#2196f3",
+      title: "Chat with us",
+      subtitle: "We typically reply within 5 minutes"
+    });
+  });
+</script>
+</body>
+</html> 
