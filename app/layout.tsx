@@ -29,16 +29,7 @@ export default function RootLayout({
         {children}
         <Analytics />
         <script src="https://ask-whisper-h9d347y3t-leonc8s-projects.vercel.app/chatbot-widget.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    initChatWidget({
-      welcomeMessage: "👋 Hi there! How can I help you today?",
-      primaryColor: "#2196f3",
-      title: "Chat with us",
-      subtitle: "We typically reply within 5 minutes"
-    });
-  });
-</script>
+
       </body>
     </html>
   )
