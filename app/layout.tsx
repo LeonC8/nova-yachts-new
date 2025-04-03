@@ -28,27 +28,27 @@ export default function RootLayout({
       <body className={`${GeistSans.className} antialiased`}>
         {children}
         <Analytics />
-        // ... existing code ...
-<script dangerouslySetInnerHTML={{
-  __html: `
-    fetch('https://ask-whisper-h9d347y3t-leonc8s-projects.vercel.app/chatbot-widget.js')
-      .then(response => response.text())
-      .then(code => {
-        const script = document.createElement('script');
-        script.textContent = code;
-        document.body.appendChild(script);
-        
-        // Initialize after script is loaded
-        initChatWidget({
-          welcomeMessage: "👋 Hi there! How can I help you today?",
-          primaryColor: "#2196f3",
-          title: "Chat with us",
-          subtitle: "We typically reply within 5 minutes"
-        });
-      });
-  `
-}} />
-
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            fetch('https://ask-whisper-h9d347y3t-leonc8s-projects.vercel.app/chatbot-widget.js', {
+              mode: 'no-cors'
+            })
+              .then(response => response.text())
+              .then(code => {
+                const script = document.createElement('script');
+                script.textContent = code;
+                document.body.appendChild(script);
+                
+                // Initialize after script is loaded
+                initChatWidget({
+                  welcomeMessage: "👋 Hi there! How can I help you today?",
+                  primaryColor: "#2196f3",
+                  title: "Chat with us",
+                  subtitle: "We typically reply within 5 minutes"
+                });
+              });
+          `
+        }} />
       </body>
     </html>
   )
