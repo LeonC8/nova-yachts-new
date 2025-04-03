@@ -28,7 +28,7 @@ export default function RootLayout({
       <body className={`${GeistSans.className} antialiased`}>
         {children}
         <Analytics />
-        <script dangerouslySetInnerHTML={{
+        {/* <script dangerouslySetInnerHTML={{
           __html: `
             fetch('https://ask-whisper.pages.dev/chatbot-widget.js')
               .then(response => response.text())
@@ -46,7 +46,7 @@ export default function RootLayout({
                 });
               });
           `
-        }} />
+        }} /> */}
       </body>
     </html>
   )
