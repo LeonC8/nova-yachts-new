@@ -30,9 +30,7 @@ export default function RootLayout({
         <Analytics />
         <script dangerouslySetInnerHTML={{
           __html: `
-            fetch('https://ask-whisper-h9d347y3t-leonc8s-projects.vercel.app/chatbot-widget.js', {
-              mode: 'no-cors'
-            })
+            fetch('https://ask-whisper.pages.dev/chatbot-widget.js')
               .then(response => response.text())
               .then(code => {
                 const script = document.createElement('script');
