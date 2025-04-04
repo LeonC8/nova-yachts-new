@@ -28,25 +28,7 @@ export default function RootLayout({
       <body className={`${GeistSans.className} antialiased`}>
         {children}
         <Analytics />
-        {/* <script dangerouslySetInnerHTML={{
-          __html: `
-            fetch('https://ask-whisper.pages.dev/chatbot-widget.js')
-              .then(response => response.text())
-              .then(code => {
-                const script = document.createElement('script');
-                script.textContent = code;
-                document.body.appendChild(script);
-                
-                // Initialize after script is loaded
-                initChatWidget({
-                  welcomeMessage: "👋 Hi there! How can I help you today?",
-                  primaryColor: "#2196f3",
-                  title: "Chat with us",
-                  subtitle: "We typically reply within 5 minutes"
-                });
-              });
-          `
-        }} /> */}
+        <script src="https://res.cloudinary.com/dsgx9xiva/raw/upload/v1743810843/yvobri1sk8stspe3jceo.js" async></script>
       </body>
     </html>
   )
