@@ -28,7 +28,6 @@ export default function RootLayout({
       <body className={`${GeistSans.className} antialiased`}>
         {children}
         <Analytics />
-        <script src="https://res.cloudinary.com/dsgx9xiva/raw/upload/v1743810843/yvobri1sk8stspe3jceo.js" async></script>
       </body>
     </html>
   )

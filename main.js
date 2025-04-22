@@ -205,8 +205,8 @@ function onMouseMove(event) {
         
         // Display tooltip
         tooltip.innerHTML = `
-            <strong>${country.userData.name}</strong><br>
-            Revenue: $${country.userData.revenue.toFixed(2)}M
+            <i class="fas fa-globe"></i> <strong>${country.userData.name}</strong><br>
+            <i class="fas fa-dollar-sign"></i> Revenue: $${country.userData.revenue.toFixed(2)}M
         `;
         tooltip.style.opacity = 1;
         
