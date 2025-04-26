@@ -28,6 +28,17 @@ export default function RootLayout({
       <body className={`${GeistSans.className} antialiased`}>
         {children}
         <Analytics />
+
+
+        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17036502791">
+        </script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'AW-17036502791');
+        </script>
       </body>
     </html>
   )
