@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { GeistSans } from 'geist/font/sans';
 import { Analytics } from "@vercel/analytics/react";
+import Script from 'next/script';
 
 
 export const metadata: Metadata = {
@@ -29,16 +30,19 @@ export default function RootLayout({
         {children}
         <Analytics />
 
-
-        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17036502791">
-        </script>
-        <script>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-
-          gtag('config', 'AW-17036502791');
-        </script>
+        {/* Google Tag Manager scripts */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=AW-17036502791"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-17036502791');
+          `}
+        </Script>
       </body>
     </html>
   )
