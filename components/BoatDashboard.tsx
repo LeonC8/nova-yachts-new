@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { initializeApp, getApps } from "firebase/app"
-import { getDatabase, ref as dbRef, remove, get } from 'firebase/database'
-import Image from 'next/image'
-import { EditBoatForm } from './EditBoatForm'
-import AddBoatForm from './AddBoatForm'
+import { useState, useEffect } from "react";
+import { initializeApp, getApps } from "firebase/app";
+import { getDatabase, ref as dbRef, remove, get } from "firebase/database";
+import Image from "next/image";
+import { EditBoatForm } from "./EditBoatForm";
+import AddBoatForm from "./AddBoatForm";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -16,7 +16,8 @@ const firebaseConfig = {
   messagingSenderId: "211610700774",
   appId: "1:211610700774:web:aec6546014d2073e08a427",
   measurementId: "G-QK02XR3XSZ",
-  databaseURL: "https://nova-yachts-new-default-rtdb.europe-west1.firebasedatabase.app"
+  databaseURL:
+    "https://nova-yachts-new-default-rtdb.europe-west1.firebasedatabase.app",
 };
 
 // Initialize Firebase
@@ -30,6 +31,7 @@ interface Boat {
   condition: string;
   taxStatus: string;
   engines: string;
+  engineHours: string;
   propulsionType: string;
   location: string;
   price: string;
@@ -71,51 +73,53 @@ interface BoatDashboardProps {
 }
 
 export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
-  const [isLoggedIn, setIsLoggedIn] = useState(initialAuthState)
-  const [loginError, setLoginError] = useState('')
-  const [boats, setBoats] = useState<Boat[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [view, setView] = useState<'list' | 'add' | 'edit'>('list')
-  const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(initialAuthState);
+  const [loginError, setLoginError] = useState("");
+  const [boats, setBoats] = useState<Boat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "add" | "edit">("list");
+  const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null);
 
   useEffect(() => {
     if (isLoggedIn) {
-      fetchBoats()
+      fetchBoats();
     }
-  }, [isLoggedIn])
+  }, [isLoggedIn]);
 
   const fetchBoats = async () => {
     try {
-      const database = getDatabase()
-      const boatsRef = dbRef(database, 'boats')
-      const snapshot = await get(boatsRef)
-      
+      const database = getDatabase();
+      const boatsRef = dbRef(database, "boats");
+      const snapshot = await get(boatsRef);
+
       if (snapshot.exists()) {
-        const boatsData: Boat[] = []
+        const boatsData: Boat[] = [];
         snapshot.forEach((childSnapshot) => {
-          const boatData = childSnapshot.val()
+          const boatData = childSnapshot.val();
           const boat: Boat = {
             id: childSnapshot.key as string,
-            name: boatData.name || '',
-            condition: boatData.condition || '',
-            taxStatus: boatData.taxStatus || '',
-            engines: boatData.engines || '',
-            propulsionType: boatData.propulsionType || '',
-            location: boatData.location || '',
-            price: boatData.price || '',
-            year: boatData.year || '',
-            sizeFeet: boatData.sizeFeet || '',
-            sizeMeters: boatData.sizeMeters || '',
-            beamFeet: boatData.beamFeet || '',
-            beamMeters: boatData.beamMeters || '',
-            fuelCapacity: boatData.fuelCapacity || '',
-            description: boatData.description || '',
-            basicListing: boatData.basicListing || '',
+            name: boatData.name || "",
+            condition: boatData.condition || "",
+            taxStatus: boatData.taxStatus || "",
+            engines: boatData.engines || "",
+            engineHours: boatData.engineHours || "",
+            propulsionType: boatData.propulsionType || "",
+            location: boatData.location || "",
+            price: boatData.price || "",
+            year: boatData.year || "",
+            sizeFeet: boatData.sizeFeet || "",
+            sizeMeters: boatData.sizeMeters || "",
+            beamFeet: boatData.beamFeet || "",
+            beamMeters: boatData.beamMeters || "",
+            fuelCapacity: boatData.fuelCapacity || "",
+            description: boatData.description || "",
+            basicListing: boatData.basicListing || "",
             equipment: {
               airConditioning: boatData.equipment?.airConditioning || false,
               generator: boatData.equipment?.generator || false,
-              hydraulicPasarelle: boatData.equipment?.hydraulicPasarelle || false,
+              hydraulicPasarelle:
+                boatData.equipment?.hydraulicPasarelle || false,
               gps: boatData.equipment?.gps || false,
               autopilot: boatData.equipment?.autopilot || false,
               radar: boatData.equipment?.radar || false,
@@ -127,68 +131,68 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
               teakFlybridge: boatData.equipment?.teakFlybridge || false,
               teakSidedeck: boatData.equipment?.teakSidedeck || false,
             },
-            mainPhoto: boatData.mainPhoto || '',
+            mainPhoto: boatData.mainPhoto || "",
             otherPhotos: boatData.otherPhotos || [],
-          }
-          boatsData.push(boat)
-        })
-        setBoats(boatsData)
+          };
+          boatsData.push(boat);
+        });
+        setBoats(boatsData);
       }
     } catch (err) {
-      setError('Failed to fetch boats')
-      console.error('Error fetching boats:', err)
+      setError("Failed to fetch boats");
+      console.error("Error fetching boats:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleRemoveBoat = async (boatId: string) => {
-    if (!window.confirm('Are you sure you want to remove this boat?')) {
-      return
+    if (!window.confirm("Are you sure you want to remove this boat?")) {
+      return;
     }
 
     try {
-      const database = getDatabase()
-      const boatRef = dbRef(database, `boats/${boatId}`)
-      await remove(boatRef)
-      
-      setBoats(prevBoats => prevBoats.filter(boat => boat.id !== boatId))
-      alert('Boat removed successfully!')
+      const database = getDatabase();
+      const boatRef = dbRef(database, `boats/${boatId}`);
+      await remove(boatRef);
+
+      setBoats((prevBoats) => prevBoats.filter((boat) => boat.id !== boatId));
+      alert("Boat removed successfully!");
     } catch (err) {
-      console.error('Error removing boat:', err)
-      alert('Failed to remove boat. Please try again.')
+      console.error("Error removing boat:", err);
+      alert("Failed to remove boat. Please try again.");
     }
-  }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    const email = (e.currentTarget as any).email.value
-    const password = (e.currentTarget as any).password.value
+    e.preventDefault();
+    const email = (e.currentTarget as any).email.value;
+    const password = (e.currentTarget as any).password.value;
 
-    if (email === 'office@novayachts.eu' && password === 'numarine26XP') {
+    if (email === "office@novayachts.eu" && password === "numarine26XP") {
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
       const loginState: LoginState = {
         isLoggedIn: true,
-        expiresAt: new Date().getTime() + thirtyDaysInMs
+        expiresAt: new Date().getTime() + thirtyDaysInMs,
       };
-      localStorage.setItem('loginState', JSON.stringify(loginState));
-      
+      localStorage.setItem("loginState", JSON.stringify(loginState));
+
       setIsLoggedIn(true);
-      setLoginError('');
+      setLoginError("");
     } else {
-      setLoginError('Invalid credentials');
+      setLoginError("Invalid credentials");
     }
-  }
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem('loginState');
+    localStorage.removeItem("loginState");
     setIsLoggedIn(false);
   };
 
   const handleEditClick = (boat: Boat) => {
-    setSelectedBoat(boat)
-    setView('edit')
-  }
+    setSelectedBoat(boat);
+    setView("edit");
+  };
 
   if (!isLoggedIn) {
     return (
@@ -202,7 +206,9 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
           <form className="mt-8 space-y-6" onSubmit={handleLogin}>
             <div className="rounded-md shadow-sm -space-y-px">
               <div>
-                <label htmlFor="email" className="sr-only">Email address</label>
+                <label htmlFor="email" className="sr-only">
+                  Email address
+                </label>
                 <input
                   id="email"
                   name="email"
@@ -213,7 +219,9 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
                 />
               </div>
               <div>
-                <label htmlFor="password" className="sr-only">Password</label>
+                <label htmlFor="password" className="sr-only">
+                  Password
+                </label>
                 <input
                   id="password"
                   name="password"
@@ -242,7 +250,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
           </form>
         </div>
       </div>
-    )
+    );
   }
 
   if (loading) {
@@ -250,7 +258,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-xl">Loading...</div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -258,34 +266,34 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-xl text-red-500">{error}</div>
       </div>
-    )
+    );
   }
 
-  if (view === 'add') {
+  if (view === "add") {
     return (
       <div>
-        
-        <AddBoatForm onSuccess={() => {
-          fetchBoats()
-          setView('list')
-        }} />
-      </div>
-    )
-  }
-
-  if (view === 'edit' && selectedBoat) {
-    return (
-      <div>
-        
-        <EditBoatForm 
-          boat={selectedBoat} 
+        <AddBoatForm
           onSuccess={() => {
-            fetchBoats()
-            setView('list')
-          }} 
+            fetchBoats();
+            setView("list");
+          }}
         />
       </div>
-    )
+    );
+  }
+
+  if (view === "edit" && selectedBoat) {
+    return (
+      <div>
+        <EditBoatForm
+          boat={selectedBoat}
+          onSuccess={() => {
+            fetchBoats();
+            setView("list");
+          }}
+        />
+      </div>
+    );
   }
 
   return (
@@ -294,7 +302,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
         <h2 className="text-2xl font-semibold text-gray-800">Boat Dashboard</h2>
         <div className="flex gap-4">
           <button
-            onClick={() => setView('add')}
+            onClick={() => setView("add")}
             className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             Add New Boat
@@ -307,11 +315,11 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
           </button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {boats.map((boat) => (
-          <div 
-            key={boat.id} 
+          <div
+            key={boat.id}
             className="bg-white rounded-lg shadow-md overflow-hidden"
           >
             <div className="relative h-48 w-full">
@@ -320,7 +328,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
                   src={boat.mainPhoto}
                   alt={boat.name}
                   fill
-                  style={{ objectFit: 'cover' }}
+                  style={{ objectFit: "cover" }}
                 />
               ) : (
                 <div className="h-full w-full bg-gray-200 flex items-center justify-center">
@@ -328,7 +336,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
                 </div>
               )}
             </div>
-            
+
             <div className="p-4">
               <h3 className="text-lg font-semibold mb-2">{boat.name}</h3>
               <div className="text-sm text-gray-600 space-y-1">
@@ -336,7 +344,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
                 <p>Size: {boat.sizeFeet} ft</p>
                 <p>Price: €{boat.price}</p>
               </div>
-              
+
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
                   onClick={() => handleEditClick(boat)}
@@ -366,5 +374,5 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
         </div>
       )}
     </div>
-  )
-} 
+  );
+}
