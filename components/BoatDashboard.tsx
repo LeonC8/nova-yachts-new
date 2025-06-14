@@ -6,6 +6,7 @@ import { getDatabase, ref as dbRef, remove, get } from "firebase/database";
 import Image from "next/image";
 import { EditBoatForm } from "./EditBoatForm";
 import AddBoatForm from "./AddBoatForm";
+import { generateBrochurePDF } from "./BoatPDF";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -43,6 +44,7 @@ interface Boat {
   fuelCapacity: string;
   description: string;
   basicListing: string;
+  sold?: boolean;
   equipment: {
     airConditioning: boolean;
     generator: boolean;
@@ -80,6 +82,13 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
   const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null);
+  const [isBrochureLoading, setIsBrochureLoading] = useState(false);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [selectedBoatIds, setSelectedBoatIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [brochureTitle, setBrochureTitle] = useState("Nova Yachts");
+  const [brochureSubtitle, setBrochureSubtitle] = useState("Collection");
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -115,6 +124,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
             fuelCapacity: boatData.fuelCapacity || "",
             description: boatData.description || "",
             basicListing: boatData.basicListing || "",
+            sold: boatData.sold || false,
             equipment: {
               airConditioning: boatData.equipment?.airConditioning || false,
               generator: boatData.equipment?.generator || false,
@@ -192,6 +202,103 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
   const handleEditClick = (boat: Boat) => {
     setSelectedBoat(boat);
     setView("edit");
+  };
+
+  const handleBrochureGeneration = async () => {
+    if (boats.length === 0 || isBrochureLoading) return;
+
+    setIsBrochureLoading(true);
+
+    try {
+      // Convert boats to brochure format
+      const brochureBoats = boats
+        .filter((boat) => !boat.sold) // Only include non-sold boats
+        .map((boat) => ({
+          id: boat.id,
+          name: boat.name,
+          price: boat.price,
+          year: boat.year,
+          sizeMeters: boat.sizeMeters,
+          location: boat.location,
+          mainPhoto: boat.mainPhoto || "",
+          taxStatus: boat.taxStatus,
+        }));
+
+      if (brochureBoats.length === 0) {
+        alert("No boats available for brochure generation.");
+        return;
+      }
+
+      await generateBrochurePDF(brochureBoats, {
+        title: brochureTitle,
+        subtitle: brochureSubtitle,
+      });
+    } catch (error) {
+      console.error("Error generating brochure:", error);
+      alert("Failed to generate brochure. Please try again.");
+    } finally {
+      setIsBrochureLoading(false);
+    }
+  };
+
+  const handleSelectionBrochureGeneration = async () => {
+    if (selectedBoatIds.size === 0) {
+      alert("Please select at least one boat.");
+      return;
+    }
+
+    setIsBrochureLoading(true);
+    setShowSelectionModal(false);
+
+    try {
+      // Convert selected boats to brochure format
+      const brochureBoats = boats
+        .filter((boat) => selectedBoatIds.has(boat.id) && !boat.sold)
+        .map((boat) => ({
+          id: boat.id,
+          name: boat.name,
+          price: boat.price,
+          year: boat.year,
+          sizeMeters: boat.sizeMeters,
+          location: boat.location,
+          mainPhoto: boat.mainPhoto || "",
+          taxStatus: boat.taxStatus,
+        }));
+
+      if (brochureBoats.length === 0) {
+        alert("No selected boats available for brochure generation.");
+        return;
+      }
+
+      await generateBrochurePDF(brochureBoats, {
+        title: brochureTitle,
+        subtitle: brochureSubtitle,
+      });
+    } catch (error) {
+      console.error("Error generating brochure:", error);
+      alert("Failed to generate brochure. Please try again.");
+    } finally {
+      setIsBrochureLoading(false);
+    }
+  };
+
+  const handleBoatSelection = (boatId: string, isSelected: boolean) => {
+    const newSelectedBoatIds = new Set(selectedBoatIds);
+    if (isSelected) {
+      newSelectedBoatIds.add(boatId);
+    } else {
+      newSelectedBoatIds.delete(boatId);
+    }
+    setSelectedBoatIds(newSelectedBoatIds);
+  };
+
+  const handleSelectAll = () => {
+    const availableBoats = boats.filter((boat) => !boat.sold);
+    setSelectedBoatIds(new Set(availableBoats.map((boat) => boat.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedBoatIds(new Set());
   };
 
   if (!isLoggedIn) {
@@ -371,6 +478,226 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
       {boats.length === 0 && (
         <div className="text-center text-gray-500 mt-8">
           No boats found in the database.
+        </div>
+      )}
+
+      {/* Brochure Generation Buttons */}
+      {boats.length > 0 && (
+        <div className="mt-12 pt-8 border-t border-gray-200">
+          {/* Brochure Title and Subtitle Inputs */}
+          <div className="max-w-2xl mx-auto mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+              Customize Brochure
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="brochure-title"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Brochure Title
+                </label>
+                <input
+                  id="brochure-title"
+                  type="text"
+                  value={brochureTitle}
+                  onChange={(e) => setBrochureTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                             text-sm"
+                  placeholder="Enter brochure title"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="brochure-subtitle"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Brochure Subtitle
+                </label>
+                <input
+                  id="brochure-subtitle"
+                  type="text"
+                  value={brochureSubtitle}
+                  onChange={(e) => setBrochureSubtitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                             text-sm"
+                  placeholder="Enter brochure subtitle"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={handleBrochureGeneration}
+              disabled={isBrochureLoading}
+              className="bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 
+                         focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 
+                         transition-colors duration-200 flex items-center gap-2 text-lg font-medium
+                         disabled:bg-green-400 disabled:cursor-not-allowed"
+            >
+              {isBrochureLoading ? (
+                <>
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                  Generating Brochure...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Create Brochure from All Yachts
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => setShowSelectionModal(true)}
+              disabled={isBrochureLoading}
+              className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 
+                         transition-colors duration-200 flex items-center gap-2 text-lg font-medium
+                         disabled:bg-blue-400 disabled:cursor-not-allowed"
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Export Selection
+            </button>
+          </div>
+          <p className="text-center text-gray-500 text-sm mt-3">
+            Generate a complete brochure PDF with all available yachts or select
+            specific ones
+          </p>
+        </div>
+      )}
+
+      {/* Selection Modal */}
+      {showSelectionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Select Yachts for Brochure
+                </h2>
+                <button
+                  onClick={() => setShowSelectionModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mt-4 flex gap-4">
+                <button
+                  onClick={handleSelectAll}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={handleDeselectAll}
+                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                >
+                  Deselect All
+                </button>
+                <span className="text-sm text-gray-600">
+                  {selectedBoatIds.size} selected
+                </span>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[50vh]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {boats
+                  .filter((boat) => !boat.sold)
+                  .map((boat) => (
+                    <div
+                      key={boat.id}
+                      className="border border-gray-200 rounded-lg overflow-hidden"
+                    >
+                      <div className="relative h-32 w-full">
+                        {boat.mainPhoto ? (
+                          <Image
+                            src={boat.mainPhoto}
+                            alt={boat.name}
+                            fill
+                            style={{ objectFit: "cover" }}
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-gray-500 text-sm">
+                              No Image
+                            </span>
+                          </div>
+                        )}
+                        <div className="absolute top-2 right-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedBoatIds.has(boat.id)}
+                            onChange={(e) =>
+                              handleBoatSelection(boat.id, e.target.checked)
+                            }
+                            className="w-5 h-5 text-blue-600 border-2 border-white rounded focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="font-semibold text-sm text-gray-900 mb-1">
+                          {boat.name}
+                        </h3>
+                        <p className="text-xs text-gray-600">
+                          {boat.year} • €{Number(boat.price).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-between items-center">
+              <button
+                onClick={() => setShowSelectionModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSelectionBrochureGeneration}
+                disabled={selectedBoatIds.size === 0}
+                className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 
+                           focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 
+                           transition-colors duration-200 font-medium
+                           disabled:bg-green-400 disabled:cursor-not-allowed"
+              >
+                Generate Brochure ({selectedBoatIds.size} selected)
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

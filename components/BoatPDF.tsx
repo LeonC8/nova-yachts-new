@@ -721,3 +721,186 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
   // Save the PDF
   doc.save(`${boatDetails.name.replace(/\s+/g, "-").toLowerCase()}.pdf`);
 };
+
+// New interface for simplified boat data in brochure
+interface BrochureBoat {
+  id: string;
+  name: string;
+  price: string;
+  year: string;
+  sizeMeters: string;
+  location: string;
+  mainPhoto: string;
+  taxStatus: string;
+}
+
+// Add interface for brochure options
+interface BrochureOptions {
+  title?: string;
+  subtitle?: string;
+}
+
+// Constants for brochure layout
+const BROCHURE_BOATS_PER_PAGE = 6;
+const BROCHURE_COLS = 2;
+const BROCHURE_ROWS = 3;
+const BROCHURE_HORIZONTAL_SPACING = 6; // Spacing between cards in a row
+const BROCHURE_VERTICAL_SPACING = 0; // Spacing between rows
+
+export const generateBrochurePDF = async (
+  boats: BrochureBoat[],
+  options: BrochureOptions = {}
+) => {
+  const { title = "Nova Yachts", subtitle = "Collection" } = options;
+
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+    compress: true,
+  });
+
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 20;
+  const contentWidth = pageWidth - margin * 2;
+  const contentHeight = pageHeight - 60; // Account for header and footer
+
+  // Calculate card dimensions (always based on 6-boat layout for consistency)
+  const cardWidth =
+    (contentWidth - BROCHURE_HORIZONTAL_SPACING) / BROCHURE_COLS;
+  const baseCardHeight =
+    (contentHeight - (BROCHURE_ROWS - 1) * BROCHURE_VERTICAL_SPACING) /
+    BROCHURE_ROWS;
+
+  let currentPage = 1;
+  let boatsOnCurrentPage = 0;
+
+  // Add first page header
+  addHeaderAndFooter(doc, currentPage);
+
+  // Add brochure title and subtitle
+  doc.setFont("times", "normal");
+  doc.setFontSize(24);
+  doc.setTextColor("#0f172a");
+  const titleWidth = doc.getTextWidth(title);
+  doc.text(title, pageWidth / 2 - titleWidth / 2, 41);
+
+  // Add subtitle
+  doc.setFont("times", "normal");
+  doc.setFontSize(16);
+  doc.setTextColor("#64748b");
+  const subtitleWidth = doc.getTextWidth(subtitle);
+  doc.text(subtitle, pageWidth / 2 - subtitleWidth / 2, 51);
+
+  let startY = 61; // Changed from 65 to 58 - Start position after title and subtitle
+
+  // Process boats
+  for (let boatIndex = 0; boatIndex < boats.length; boatIndex++) {
+    const boat = boats[boatIndex];
+
+    // Determine boats per page: 6 for all pages now
+    const boatsPerPage = BROCHURE_BOATS_PER_PAGE; // Changed from conditional logic to always use 6
+
+    // Check if we need a new page
+    if (boatsOnCurrentPage >= boatsPerPage) {
+      doc.addPage();
+      currentPage++;
+      addHeaderAndFooter(doc, currentPage);
+      boatsOnCurrentPage = 0;
+      startY = 40; // Reset Y position for new page
+    }
+
+    // Calculate card height based on page (subtract 10 only on first page)
+    const cardHeight = currentPage === 1 ? baseCardHeight - 10 : baseCardHeight;
+    const imageHeight = cardHeight * 0.65; // Slightly increase image portion
+    const infoHeight = cardHeight * 0.35; // Reduce info portion
+
+    // Calculate position in grid (always use 2-column layout)
+    const col = boatsOnCurrentPage % BROCHURE_COLS;
+    const row = Math.floor(boatsOnCurrentPage / BROCHURE_COLS);
+
+    const cardX = margin + col * (cardWidth + BROCHURE_HORIZONTAL_SPACING);
+    const cardY = startY + row * (cardHeight + BROCHURE_VERTICAL_SPACING);
+
+    try {
+      // Process and add boat image
+      const imageData = await processMainImage(
+        boat.mainPhoto,
+        cardWidth / imageHeight
+      );
+
+      // Add boat image with rounded corners
+      doc.addImage(imageData, "JPEG", cardX, cardY, cardWidth, imageHeight);
+
+      // Add boat information below image
+      const textStartY = cardY + imageHeight + 6; // Increased spacing from 3 to 6
+
+      // Boat name - using same font as price used to be
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.setTextColor("#0f172a");
+      const nameText =
+        boat.name.length > 30 ? boat.name.substring(0, 30) + "..." : boat.name;
+      doc.text(nameText, cardX, textStartY);
+
+      // Year and Price on same line with VAT status in parentheses
+      doc.setFontSize(10);
+      doc.setTextColor("#64748b");
+      const priceText = `€${Number(boat.price).toLocaleString()}`;
+      const vatText = boat.taxStatus === "paid" ? "VAT Paid" : "VAT Not Paid";
+      doc.text(
+        `${boat.year} • ${priceText} (${vatText})`,
+        cardX,
+        textStartY + 8
+      ); // Combined line
+    } catch (error) {
+      console.error(`Error adding boat ${boat.name}:`, error);
+
+      // Add placeholder if image fails
+      doc.setDrawColor("#e2e8f0");
+      doc.setFillColor("#f8fafc");
+      doc.rect(cardX, cardY, cardWidth, imageHeight, "F");
+
+      // Add "No Image" text
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.setTextColor("#94a3b8");
+      const noImageText = "Image not available";
+      const noImageWidth = doc.getTextWidth(noImageText);
+      doc.text(
+        noImageText,
+        cardX + (cardWidth - noImageWidth) / 2,
+        cardY + imageHeight / 2
+      );
+
+      // Still add boat information
+      const textStartY = cardY + imageHeight + 6; // Increased spacing from 3 to 6
+
+      // Boat name - using same font as price used to be
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.setTextColor("#0f172a");
+      const nameText =
+        boat.name.length > 30 ? boat.name.substring(0, 30) + "..." : boat.name;
+      doc.text(nameText, cardX, textStartY);
+
+      // Year and Price on same line with VAT status in parentheses
+      doc.setFontSize(10);
+      doc.setTextColor("#64748b");
+      const priceText = `€${Number(boat.price).toLocaleString()}`;
+      const vatText = boat.taxStatus === "paid" ? "VAT Paid" : "VAT Not Paid";
+      doc.text(
+        `${boat.year} • ${priceText} (${vatText})`,
+        cardX,
+        textStartY + 8
+      ); // Combined line
+    }
+
+    boatsOnCurrentPage++;
+  }
+
+  // Save the PDF
+  const currentDate = new Date().toISOString().split("T")[0];
+  doc.save(`Nova-Yachts-Brochure-${currentDate}.pdf`);
+};

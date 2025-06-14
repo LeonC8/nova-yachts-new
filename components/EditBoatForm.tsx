@@ -35,6 +35,7 @@ interface Boat {
   fuelCapacity: string;
   description: string;
   basicListing: string;
+  sold?: boolean;
   equipment: {
     airConditioning: boolean;
     generator: boolean;
@@ -69,7 +70,17 @@ interface PhotoItem {
 
 export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
   const [activeTab, setActiveTab] = useState("basic");
-  const [formData, setFormData] = useState(boat);
+
+  // Helper function to ensure boat data has sold field
+  const initializeBoatData = (boatData: Boat) => {
+    const initialData = {
+      ...boatData,
+      sold: boatData.sold === true, // Only true if explicitly true
+    };
+    return initialData;
+  };
+
+  const [formData, setFormData] = useState(() => initializeBoatData(boat));
   const [mainPhoto, setMainPhoto] = useState<File | null>(null);
   const [otherPhotos, setOtherPhotos] = useState<PhotoItem[]>(() =>
     (boat.otherPhotos || []).map((url, index) => ({
@@ -78,6 +89,11 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
     }))
   );
   const [loading, setLoading] = useState(false);
+
+  // Update formData when boat prop changes
+  useEffect(() => {
+    setFormData(initializeBoatData(boat));
+  }, [boat]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -139,6 +155,8 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
       setMainPhoto(e.target.files[0]);
     }
   };
+
+  console.log(boat.id);
 
   const handleOtherPhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -535,6 +553,30 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
                   className="ml-2 text-sm font-medium text-gray-700"
                 >
                   Basic Listing (can't be clicked into)
+                </label>
+              </div>
+            </div>
+
+            <div className="col-span-1 sm:col-span-2">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="sold"
+                  name="sold"
+                  checked={formData.sold === true}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      sold: e.target.checked,
+                    }))
+                  }
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label
+                  htmlFor="sold"
+                  className="ml-2 text-sm font-medium text-gray-700"
+                >
+                  Mark as Sold
                 </label>
               </div>
             </div>

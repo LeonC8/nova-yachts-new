@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { initializeApp, getApps, FirebaseApp } from "firebase/app"
-import { getDatabase, ref, onValue, Database } from 'firebase/database'
-import { FixedNavbar } from './FixedNavbar'
-import { Footer } from './Footer'
-import { useRouter } from 'next/navigation'
-import { Navbar } from './Navbar'
-import { Loader } from './Loader'
-import { X, Phone, Mail, MapPin } from 'lucide-react'
+import { useState, useEffect } from "react";
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
+import { getDatabase, ref, onValue, Database } from "firebase/database";
+import { FixedNavbar } from "./FixedNavbar";
+import { Footer } from "./Footer";
+import { useRouter } from "next/navigation";
+import { Navbar } from "./Navbar";
+import { Loader } from "./Loader";
+import { X, Phone, Mail, MapPin } from "lucide-react";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -19,7 +19,8 @@ const firebaseConfig = {
   messagingSenderId: "211610700774",
   appId: "1:211610700774:web:aec6546014d2073e08a427",
   measurementId: "G-QK02XR3XSZ",
-  databaseURL: "https://nova-yachts-new-default-rtdb.europe-west1.firebasedatabase.app"
+  databaseURL:
+    "https://nova-yachts-new-default-rtdb.europe-west1.firebasedatabase.app",
 };
 
 // Initialize Firebase
@@ -39,6 +40,7 @@ interface Boat {
   mainPhoto: string;
   inStock: string;
   basicListing: string;
+  sold?: boolean;
 }
 
 interface ContactOverlayProps {
@@ -58,13 +60,17 @@ function ContactOverlay({ isOpen, onClose }: ContactOverlayProps) {
         >
           <X className="h-5 w-5 text-gray-500" />
         </button>
-        
+
         <h2 className="text-xl text-gray-800 font-medium mb-3">Contact</h2>
-        <p className="text-gray-600 mb-4 text-sm mb-6 pr-12">Please contact us to get more information about this yacht.</p>
+        <p className="text-gray-600 mb-4 text-sm mb-6 pr-12">
+          Please contact us to get more information about this yacht.
+        </p>
         <div className="space-y-4">
           <div className="flex items-center">
             <MapPin className="h-5 w-5 text-gray-800 mr-4" />
-            <span className="text-gray-600 text-sm">Gomboševa 28, Zagreb, Croatia</span>
+            <span className="text-gray-600 text-sm">
+              Gomboševa 28, Zagreb, Croatia
+            </span>
           </div>
           <div className="flex items-center">
             <Phone className="h-5 w-5 text-gray-800 mr-4" />
@@ -95,7 +101,7 @@ export function NewYachtsPageComponent() {
       database = getDatabase(app);
     }
 
-    const boatsRef = ref(database, 'boats');
+    const boatsRef = ref(database, "boats");
     onValue(boatsRef, (snapshot) => {
       const data = snapshot.val();
       const yachts: Boat[] = [];
@@ -108,7 +114,8 @@ export function NewYachtsPageComponent() {
             year: data[id].year,
             mainPhoto: data[id].mainPhoto,
             inStock: data[id].inStock,
-            basicListing: data[id].basicListing
+            basicListing: data[id].basicListing,
+            sold: data[id].sold || false,
           });
         }
       }
@@ -117,7 +124,7 @@ export function NewYachtsPageComponent() {
         if (a.basicListing === b.basicListing) return 0;
         return a.basicListing === "yes" ? 1 : -1;
       });
-      
+
       setInStockYachts(sortedYachts);
       // Ensure we're at the top before removing loading state
       window.scrollTo(0, 0);
@@ -126,6 +133,9 @@ export function NewYachtsPageComponent() {
   }, []);
 
   const handleBoatClick = (boat: Boat) => {
+    if (boat.sold) {
+      return; // Don't navigate if sold
+    }
     if (boat.basicListing === "yes") {
       setIsContactOverlayOpen(true);
     } else {
@@ -140,33 +150,77 @@ export function NewYachtsPageComponent() {
       <main className="flex-grow">
         <section className="container mx-auto px-4 sm:mt-4 mb-4 py-5 overflow-hidden xl:px-20">
           <h2 className="text-2xl font-medium mb-2 font-serif">New Yachts</h2>
-          <p className="pt-0 pb-6 mt-0 text-gray-700 text-sm ">{inStockYachts.length} available</p>
+          <p className="pt-0 pb-6 mt-0 text-gray-700 text-sm ">
+            {inStockYachts.length} available
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {inStockYachts.map((yacht) => (
-              <div 
-                key={yacht.id} 
-                className={`bg-white rounded shadow-md overflow-hidden ${yacht.basicListing !== "yes" ? "cursor-pointer" : ""}`}
-                onClick={() => handleBoatClick(yacht)}
+              <div
+                key={yacht.id}
+                className={`bg-white rounded shadow-md overflow-hidden ${
+                  yacht.basicListing !== "yes" && !yacht.sold
+                    ? "cursor-pointer"
+                    : ""
+                }`}
               >
-                <img src={yacht.mainPhoto} alt={yacht.name} className="w-full h-48 object-cover" />
-                <div className="p-4">
-                  {/* <p className="text-xs font-semibold text-slate-500 mb-2">IMMEDIATE DELIVERY</p> */}
-                  <h3 className="text-md font-medium mb-2">{yacht.name}</h3>
-                  <p className="text-sm text-gray-600">{Number(yacht.price) === 0 ? "Price on ask" : `€ ${Number(yacht.price).toLocaleString()}`} • {yacht.year}</p>
-                  {yacht.basicListing === 'yes' && (
-                    <p className="text-xs text-gray-600 mt-3 bg-gray-100 rounded-md p-1 w-fit font-medium border border-gray-200 px-2">Contact for more information</p>
-                  )}
-                </div>
+                {yacht.sold ? (
+                  <div className="cursor-default">
+                    <div className="relative">
+                      <img
+                        src={yacht.mainPhoto}
+                        alt={yacht.name}
+                        className="w-full h-48 object-cover opacity-75"
+                      />
+                      <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-md text-xs font-bold">
+                        JUST SOLD
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-md font-medium mb-2 text-gray-600">
+                        {yacht.name}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {Number(yacht.price) === 0
+                          ? "Price on ask"
+                          : `€ ${Number(yacht.price).toLocaleString()}`}{" "}
+                        • {yacht.year}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div onClick={() => handleBoatClick(yacht)}>
+                    <img
+                      src={yacht.mainPhoto}
+                      alt={yacht.name}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="p-4">
+                      {/* <p className="text-xs font-semibold text-slate-500 mb-2">IMMEDIATE DELIVERY</p> */}
+                      <h3 className="text-md font-medium mb-2">{yacht.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        {Number(yacht.price) === 0
+                          ? "Price on ask"
+                          : `€ ${Number(yacht.price).toLocaleString()}`}{" "}
+                        • {yacht.year}
+                      </p>
+                      {yacht.basicListing === "yes" && (
+                        <p className="text-xs text-gray-600 mt-3 bg-gray-100 rounded-md p-1 w-fit font-medium border border-gray-200 px-2">
+                          Contact for more information
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </section>
       </main>
       <Footer />
-      <ContactOverlay 
-        isOpen={isContactOverlayOpen} 
-        onClose={() => setIsContactOverlayOpen(false)} 
+      <ContactOverlay
+        isOpen={isContactOverlayOpen}
+        onClose={() => setIsContactOverlayOpen(false)}
       />
     </div>
-  )
+  );
 }
