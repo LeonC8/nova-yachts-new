@@ -7,6 +7,13 @@ import Image from "next/image";
 import { EditBoatForm } from "./EditBoatForm";
 import AddBoatForm from "./AddBoatForm";
 import { generateBrochurePDF } from "./BoatPDF";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import type {
+  DropResult,
+  DroppableProvided,
+  DraggableProvided,
+  DraggableStateSnapshot,
+} from "@hello-pangea/dnd";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -84,9 +91,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
   const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null);
   const [isBrochureLoading, setIsBrochureLoading] = useState(false);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
-  const [selectedBoatIds, setSelectedBoatIds] = useState<Set<string>>(
-    new Set()
-  );
+  const [selectedBoatIds, setSelectedBoatIds] = useState<string[]>([]);
   const [brochureTitle, setBrochureTitle] = useState("Nova Yachts");
   const [brochureSubtitle, setBrochureSubtitle] = useState("Collection");
 
@@ -242,7 +247,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
   };
 
   const handleSelectionBrochureGeneration = async () => {
-    if (selectedBoatIds.size === 0) {
+    if (selectedBoatIds.length === 0) {
       alert("Please select at least one boat.");
       return;
     }
@@ -251,9 +256,10 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
     setShowSelectionModal(false);
 
     try {
-      // Convert selected boats to brochure format
-      const brochureBoats = boats
-        .filter((boat) => selectedBoatIds.has(boat.id) && !boat.sold)
+      // Convert selected boats to brochure format in the selected order
+      const brochureBoats = selectedBoatIds
+        .map((boatId) => boats.find((boat) => boat.id === boatId))
+        .filter((boat): boat is Boat => boat !== undefined && !boat.sold)
         .map((boat) => ({
           id: boat.id,
           name: boat.name,
@@ -283,22 +289,30 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
   };
 
   const handleBoatSelection = (boatId: string, isSelected: boolean) => {
-    const newSelectedBoatIds = new Set(selectedBoatIds);
     if (isSelected) {
-      newSelectedBoatIds.add(boatId);
+      setSelectedBoatIds((prev) => [...prev, boatId]);
     } else {
-      newSelectedBoatIds.delete(boatId);
+      setSelectedBoatIds((prev) => prev.filter((id) => id !== boatId));
     }
-    setSelectedBoatIds(newSelectedBoatIds);
   };
 
   const handleSelectAll = () => {
     const availableBoats = boats.filter((boat) => !boat.sold);
-    setSelectedBoatIds(new Set(availableBoats.map((boat) => boat.id)));
+    setSelectedBoatIds(availableBoats.map((boat) => boat.id));
   };
 
   const handleDeselectAll = () => {
-    setSelectedBoatIds(new Set());
+    setSelectedBoatIds([]);
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(selectedBoatIds);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setSelectedBoatIds(items);
   };
 
   if (!isLoggedIn) {
@@ -599,7 +613,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
       {/* Selection Modal */}
       {showSelectionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[80vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-900">
@@ -626,56 +640,164 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
                   Deselect All
                 </button>
                 <span className="text-sm text-gray-600">
-                  {selectedBoatIds.size} selected
+                  {selectedBoatIds.length} selected
                 </span>
               </div>
             </div>
 
             <div className="p-6 overflow-y-auto max-h-[50vh]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {boats
-                  .filter((boat) => !boat.sold)
-                  .map((boat) => (
-                    <div
-                      key={boat.id}
-                      className="border border-gray-200 rounded-lg overflow-hidden"
-                    >
-                      <div className="relative h-32 w-full">
-                        {boat.mainPhoto ? (
-                          <Image
-                            src={boat.mainPhoto}
-                            alt={boat.name}
-                            fill
-                            style={{ objectFit: "cover" }}
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-500 text-sm">
-                              No Image
-                            </span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Available Boats Section */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Available Yachts
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    {boats
+                      .filter((boat) => !boat.sold)
+                      .map((boat) => (
+                        <div
+                          key={boat.id}
+                          className="border border-gray-200 rounded-lg overflow-hidden"
+                        >
+                          <div className="relative h-32 w-full">
+                            {boat.mainPhoto ? (
+                              <Image
+                                src={boat.mainPhoto}
+                                alt={boat.name}
+                                fill
+                                style={{ objectFit: "cover" }}
+                              />
+                            ) : (
+                              <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+                                <span className="text-gray-500 text-sm">
+                                  No Image
+                                </span>
+                              </div>
+                            )}
+                            <div className="absolute top-2 right-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedBoatIds.includes(boat.id)}
+                                onChange={(e) =>
+                                  handleBoatSelection(boat.id, e.target.checked)
+                                }
+                                className="w-5 h-5 text-blue-600 border-2 border-white rounded focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="p-3">
+                            <h4 className="font-semibold text-sm text-gray-900 mb-1">
+                              {boat.name}
+                            </h4>
+                            <p className="text-xs text-gray-600">
+                              {boat.year} • €
+                              {Number(boat.price).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Selected Boats Order Section */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Selected Order ({selectedBoatIds.length})
+                  </h3>
+                  {selectedBoatIds.length > 0 ? (
+                    <DragDropContext onDragEnd={handleDragEnd}>
+                      <Droppable
+                        droppableId="droppable-boats"
+                        direction="vertical"
+                      >
+                        {(provided: DroppableProvided) => (
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            className="space-y-3 max-h-96 overflow-y-auto pr-2"
+                          >
+                            {selectedBoatIds.map((boatId, index) => {
+                              const boat = boats.find((b) => b.id === boatId);
+                              if (!boat) return null;
+
+                              return (
+                                <Draggable
+                                  key={boatId}
+                                  draggableId={boatId}
+                                  index={index}
+                                >
+                                  {(
+                                    provided: DraggableProvided,
+                                    snapshot: DraggableStateSnapshot
+                                  ) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className={`flex items-center space-x-3 p-3 bg-white rounded-lg border ${
+                                        snapshot.isDragging
+                                          ? "border-blue-500 shadow-lg"
+                                          : "border-gray-200"
+                                      } cursor-move`}
+                                    >
+                                      <div className="text-sm font-bold text-gray-500 min-w-[24px]">
+                                        {index + 1}
+                                      </div>
+                                      <div className="relative w-16 h-16 flex-shrink-0">
+                                        {boat.mainPhoto ? (
+                                          <Image
+                                            src={boat.mainPhoto}
+                                            alt={boat.name}
+                                            fill
+                                            style={{ objectFit: "cover" }}
+                                            className="rounded-md"
+                                          />
+                                        ) : (
+                                          <div className="w-full h-full bg-gray-200 rounded-md flex items-center justify-center">
+                                            <span className="text-gray-400 text-xs">
+                                              No Image
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex-grow min-w-0">
+                                        <h4 className="font-semibold text-sm text-gray-900 truncate">
+                                          {boat.name}
+                                        </h4>
+                                        <p className="text-xs text-gray-600">
+                                          {boat.year} • €
+                                          {Number(boat.price).toLocaleString()}
+                                        </p>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleBoatSelection(boatId, false)
+                                        }
+                                        className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600 flex-shrink-0"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              );
+                            })}
+                            {provided.placeholder}
                           </div>
                         )}
-                        <div className="absolute top-2 right-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedBoatIds.has(boat.id)}
-                            onChange={(e) =>
-                              handleBoatSelection(boat.id, e.target.checked)
-                            }
-                            className="w-5 h-5 text-blue-600 border-2 border-white rounded focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                      <div className="p-3">
-                        <h3 className="font-semibold text-sm text-gray-900 mb-1">
-                          {boat.name}
-                        </h3>
-                        <p className="text-xs text-gray-600">
-                          {boat.year} • €{Number(boat.price).toLocaleString()}
-                        </p>
-                      </div>
+                      </Droppable>
+                    </DragDropContext>
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <p className="text-sm">No yachts selected yet.</p>
+                      <p className="text-xs mt-1">
+                        Select yachts from the left to see them here in order.
+                      </p>
                     </div>
-                  ))}
+                  )}
+                </div>
               </div>
             </div>
 
@@ -688,13 +810,13 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
               </button>
               <button
                 onClick={handleSelectionBrochureGeneration}
-                disabled={selectedBoatIds.size === 0}
+                disabled={selectedBoatIds.length === 0}
                 className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 
                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 
                            transition-colors duration-200 font-medium
                            disabled:bg-green-400 disabled:cursor-not-allowed"
               >
-                Generate Brochure ({selectedBoatIds.size} selected)
+                Generate Brochure ({selectedBoatIds.length} selected)
               </button>
             </div>
           </div>
