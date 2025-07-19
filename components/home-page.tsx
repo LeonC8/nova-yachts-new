@@ -33,6 +33,19 @@ if (!getApps().length) {
   database = getDatabase(app);
 }
 
+// Hardcoded boat IDs for each section
+const NEW_YACHTS_IDS = [
+  "-OA7TvkMaDuVSbrNcH6l",
+  "-OA7U9rIv9J5E-3vJYl9",
+  "-OUAizmOHXqeSDDZLr36",
+];
+
+const PRE_OWNED_YACHTS_IDS = [
+  "-OAD8tAn6Mpwkj9TrS11",
+  "-OAChnNruMgk21661rVD",
+  "-OS9s7vUAt16l0MrTnHb",
+];
+
 interface Boat {
   id: string;
   name: string;
@@ -156,24 +169,34 @@ export function HomePageComponent() {
           basicListing: data[id].basicListing,
           sold: data[id].sold || false,
         };
-        if (data[id].inStock === "yes") {
-          inStockBoats.push(boat);
-        } else {
-          preOwnedBoats.push(boat);
+        if (NEW_YACHTS_IDS.includes(id) || PRE_OWNED_YACHTS_IDS.includes(id)) {
+          if (NEW_YACHTS_IDS.includes(id)) {
+            inStockBoats.push(boat);
+          } else if (PRE_OWNED_YACHTS_IDS.includes(id)) {
+            preOwnedBoats.push(boat);
+          }
         }
       }
 
-      // Sort boats - non-basic listings first
-      const sortBoats = (boats: Boat[]) => {
+      // Sort boats - maintain order from hardcoded arrays and prioritize non-basic listings
+      const sortBoats = (boats: Boat[], idOrder: string[]) => {
         return boats.sort((a, b) => {
+          // First, sort by order in the hardcoded array
+          const aIndex = idOrder.indexOf(a.id);
+          const bIndex = idOrder.indexOf(b.id);
+          if (aIndex !== bIndex) {
+            return aIndex - bIndex;
+          }
+
+          // Then sort by basic listing (non-basic first)
           if (a.basicListing === "yes" && b.basicListing !== "yes") return 1;
           if (a.basicListing !== "yes" && b.basicListing === "yes") return -1;
           return 0;
         });
       };
 
-      setInStockYachts(sortBoats(inStockBoats));
-      setPreOwnedYachts(sortBoats(preOwnedBoats));
+      setInStockYachts(sortBoats(inStockBoats, NEW_YACHTS_IDS));
+      setPreOwnedYachts(sortBoats(preOwnedBoats, PRE_OWNED_YACHTS_IDS));
     });
   }, []);
 
@@ -441,7 +464,7 @@ export function HomePageComponent() {
             </div>
             <div className="relative">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {preOwnedYachts.slice(0, 3).map((yacht) => (
+                {preOwnedYachts.map((yacht) => (
                   <div
                     key={yacht.id}
                     className={`bg-white rounded border shadow-sm border-gray-200 overflow-hidden ${
@@ -550,16 +573,6 @@ export function HomePageComponent() {
                   </div>
                 ))}
               </div>
-              {preOwnedYachts.length > 3 && (
-                <div className="flex justify-center mt-8">
-                  <button
-                    onClick={() => handleViewAll("/pre-owned")}
-                    className="px-6 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    See all ({preOwnedYachts.length})
-                  </button>
-                </div>
-              )}
             </div>
           </section>
         </div>
@@ -571,7 +584,7 @@ export function HomePageComponent() {
               About Us
             </h2>
             <p className="text-gray-600 mb-4 text-sm">
-              With over 25 years of experience in delivering premium-quality
+              With over 30 years of experience in delivering premium-quality
               motorboats and yachts we offer a large selection off new and
               second-hand boats.
             </p>

@@ -461,6 +461,9 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
             <div className="p-4">
               <h3 className="text-lg font-semibold mb-2">{boat.name}</h3>
               <div className="text-sm text-gray-600 space-y-1">
+                <p className="font-mono text-xs bg-gray-100 px-2 py-1 rounded border inline-block mb-2">
+                  ID: {boat.id}
+                </p>
                 <p>Year: {boat.year}</p>
                 <p>Size: {boat.sizeFeet} ft</p>
                 <p>Price: €{boat.price}</p>
@@ -690,6 +693,9 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
                             <h4 className="font-semibold text-sm text-gray-900 mb-1">
                               {boat.name}
                             </h4>
+                            <p className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded border inline-block mb-1">
+                              {boat.id}
+                            </p>
                             <p className="text-xs text-gray-600">
                               {boat.year} • €
                               {Number(boat.price).toLocaleString()}
@@ -765,6 +771,9 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
                                         <h4 className="font-semibold text-sm text-gray-900 truncate">
                                           {boat.name}
                                         </h4>
+                                        <p className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded border inline-block mb-1">
+                                          {boat.id}
+                                        </p>
                                         <p className="text-xs text-gray-600">
                                           {boat.year} • €
                                           {Number(boat.price).toLocaleString()}
