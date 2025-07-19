@@ -36,7 +36,7 @@ if (!getApps().length) {
 // Hardcoded boat IDs for each section
 const NEW_YACHTS_IDS = [
   "-OA7TvkMaDuVSbrNcH6l",
-  "-OA7U9rIv9J5E-3vJYl9",
+  "-OVYoHsESFYYlwMgp7qe",
   "-OUAizmOHXqeSDDZLr36",
 ];
 
