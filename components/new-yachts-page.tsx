@@ -38,7 +38,7 @@ interface Boat {
   price: string;
   year: string;
   mainPhoto: string;
-  inStock: string;
+  condition: string;
   basicListing: string;
   sold?: boolean;
 }
@@ -87,7 +87,7 @@ function ContactOverlay({ isOpen, onClose }: ContactOverlayProps) {
 }
 
 export function NewYachtsPageComponent() {
-  const [inStockYachts, setInStockYachts] = useState<Boat[]>([]);
+  const [newYachts, setNewYachts] = useState<Boat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const [isContactOverlayOpen, setIsContactOverlayOpen] = useState(false);
@@ -106,14 +106,14 @@ export function NewYachtsPageComponent() {
       const data = snapshot.val();
       const yachts: Boat[] = [];
       for (const id in data) {
-        if (data[id].inStock === "yes") {
+        if (data[id].condition === "new") {
           yachts.push({
             id,
             name: data[id].name,
             price: data[id].price,
             year: data[id].year,
             mainPhoto: data[id].mainPhoto,
-            inStock: data[id].inStock,
+            condition: data[id].condition,
             basicListing: data[id].basicListing,
             sold: data[id].sold || false,
           });
@@ -125,7 +125,7 @@ export function NewYachtsPageComponent() {
         return a.basicListing === "yes" ? 1 : -1;
       });
 
-      setInStockYachts(sortedYachts);
+      setNewYachts(sortedYachts);
       // Ensure we're at the top before removing loading state
       window.scrollTo(0, 0);
       setIsLoading(false);
@@ -151,10 +151,10 @@ export function NewYachtsPageComponent() {
         <section className="container mx-auto px-4 sm:mt-4 mb-4 py-5 overflow-hidden xl:px-20">
           <h2 className="text-2xl font-medium mb-2 font-serif">New Yachts</h2>
           <p className="pt-0 pb-6 mt-0 text-gray-700 text-sm ">
-            {inStockYachts.length} available
+            {newYachts.length} available
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {inStockYachts.map((yacht) => (
+            {newYachts.map((yacht) => (
               <div
                 key={yacht.id}
                 className={`bg-white rounded shadow-md overflow-hidden ${
