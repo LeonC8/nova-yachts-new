@@ -568,7 +568,7 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
       }
     }
 
-    // After gallery is complete, add equipment on the same page if there's space
+    // After gallery is complete, add description on the same page if there's space
     if (yPos > doc.internal.pageSize.height - 100) {
       // Check if we need a new page
       doc.addPage();
@@ -578,7 +578,7 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
       yPos += 20; // Add some spacing if on same page
     }
 
-    // Add Description section
+    // Add Description section with proper pagination
     if (boatDetails.description && boatDetails.description.trim()) {
       // Description title
       doc.setFont("times", "normal");
@@ -587,70 +587,45 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
       doc.text("Description", margin, yPos);
       yPos += 15;
 
-      // Description text
+      // Description text with padding
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       doc.setTextColor("#374151");
 
+      // Add right padding only (30mm on right side)
+      const rightPadding = 30;
+      const descriptionWidth = contentWidth - rightPadding;
+
       // Split text into lines to handle line breaks and wrapping
       const descriptionText = boatDetails.description.replace(/\\n/g, "\n");
-      const lines = doc.splitTextToSize(descriptionText, contentWidth);
-      doc.text(lines, margin, yPos);
-      yPos += lines.length * 5 + 20; // Adjust spacing based on number of lines
+      const lines = doc.splitTextToSize(descriptionText, descriptionWidth);
 
-      // Check if we need a new page for equipment
-      if (yPos > doc.internal.pageSize.height - 100) {
-        doc.addPage();
-        addHeaderAndFooter(doc, doc.getNumberOfPages());
-        yPos = 40;
+      // Calculate line height and available space per page
+      const lineHeight = 5;
+      const bottomMargin = 35; // Space for footer
+      const maxYPerPage = doc.internal.pageSize.height - bottomMargin;
+
+      // Add lines with pagination
+      for (let i = 0; i < lines.length; i++) {
+        // Check if we need a new page
+        if (yPos + lineHeight > maxYPerPage) {
+          doc.addPage();
+          addHeaderAndFooter(doc, doc.getNumberOfPages());
+          yPos = 40;
+        }
+
+        // Use simple text output without alignment options to prevent stretching
+        doc.text(lines[i], margin, yPos);
+        yPos += lineHeight;
       }
     }
-
-    // Equipment title
-    doc.setFont("times", "normal");
-    doc.setFontSize(20);
-    doc.setTextColor("#0f172a");
-    doc.text("Equipment", margin, yPos);
-    yPos += 20;
-
-    // Equipment list in two columns
-    const equipment = Object.entries(boatDetails.equipment)
-      .filter(([_, value]) => value)
-      .map(([item, _]) =>
-        item
-          .split(/(?=[A-Z])/)
-          .map(
-            (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-          )
-          .join(" ")
-      );
-
-    const midPoint = Math.ceil(equipment.length / 2);
-    const leftColumn = equipment.slice(0, midPoint);
-    const rightColumn = equipment.slice(midPoint);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor("#374151");
-
-    let equipmentYPos = yPos;
-    leftColumn.forEach((item) => {
-      doc.text(`• ${item}`, margin, equipmentYPos);
-      equipmentYPos += 8;
-    });
-
-    equipmentYPos = yPos;
-    rightColumn.forEach((item) => {
-      doc.text(`• ${item}`, margin + contentWidth / 2, equipmentYPos);
-      equipmentYPos += 8;
-    });
   } else {
-    // If no gallery, just add equipment on the next page
+    // If no gallery, just add description on the next page
     doc.addPage();
     addHeaderAndFooter(doc, 3);
     yPos = 40;
 
-    // Add Description section
+    // Add Description section with proper pagination
     if (boatDetails.description && boatDetails.description.trim()) {
       // Description title
       doc.setFont("times", "normal");
@@ -659,63 +634,38 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
       doc.text("Description", margin, yPos);
       yPos += 15;
 
-      // Description text
+      // Description text with padding
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       doc.setTextColor("#374151");
 
+      // Add right padding only (30mm on right side)
+      const rightPadding = 30;
+      const descriptionWidth = contentWidth - rightPadding;
+
       // Split text into lines to handle line breaks and wrapping
       const descriptionText = boatDetails.description.replace(/\\n/g, "\n");
-      const lines = doc.splitTextToSize(descriptionText, contentWidth);
-      doc.text(lines, margin, yPos);
-      yPos += lines.length * 5 + 20; // Adjust spacing based on number of lines
+      const lines = doc.splitTextToSize(descriptionText, descriptionWidth);
 
-      // Check if we need a new page for equipment
-      if (yPos > doc.internal.pageSize.height - 100) {
-        doc.addPage();
-        addHeaderAndFooter(doc, doc.getNumberOfPages());
-        yPos = 40;
+      // Calculate line height and available space per page
+      const lineHeight = 5;
+      const bottomMargin = 35; // Space for footer
+      const maxYPerPage = doc.internal.pageSize.height - bottomMargin;
+
+      // Add lines with pagination
+      for (let i = 0; i < lines.length; i++) {
+        // Check if we need a new page
+        if (yPos + lineHeight > maxYPerPage) {
+          doc.addPage();
+          addHeaderAndFooter(doc, doc.getNumberOfPages());
+          yPos = 40;
+        }
+
+        // Use simple text output without alignment options to prevent stretching
+        doc.text(lines[i], margin, yPos);
+        yPos += lineHeight;
       }
     }
-
-    // Equipment title
-    doc.setFont("times", "normal");
-    doc.setFontSize(20);
-    doc.setTextColor("#0f172a");
-    doc.text("Equipment", margin, yPos);
-    yPos += 20;
-
-    // Equipment list in two columns
-    const equipment = Object.entries(boatDetails.equipment)
-      .filter(([_, value]) => value)
-      .map(([item, _]) =>
-        item
-          .split(/(?=[A-Z])/)
-          .map(
-            (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-          )
-          .join(" ")
-      );
-
-    const midPoint = Math.ceil(equipment.length / 2);
-    const leftColumn = equipment.slice(0, midPoint);
-    const rightColumn = equipment.slice(midPoint);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor("#374151");
-
-    let equipmentYPos = yPos;
-    leftColumn.forEach((item) => {
-      doc.text(`• ${item}`, margin, equipmentYPos);
-      equipmentYPos += 8;
-    });
-
-    equipmentYPos = yPos;
-    rightColumn.forEach((item) => {
-      doc.text(`• ${item}`, margin + contentWidth / 2, equipmentYPos);
-      equipmentYPos += 8;
-    });
   }
 
   // Save the PDF
