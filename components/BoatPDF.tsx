@@ -597,7 +597,14 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
       const descriptionWidth = contentWidth - rightPadding;
 
       // Split text into lines to handle line breaks and wrapping
-      const descriptionText = boatDetails.description.replace(/\\n/g, "\n");
+      let descriptionText = boatDetails.description.replace(/\\n/g, "\n");
+
+      // Normalize Unicode characters for better PDF rendering
+      descriptionText = descriptionText.normalize("NFC");
+
+      // Clean up any problematic characters that might cause spacing issues
+      descriptionText = descriptionText.replace(/[\u200B-\u200D\uFEFF]/g, ""); // Remove zero-width characters
+
       const lines = doc.splitTextToSize(descriptionText, descriptionWidth);
 
       // Calculate line height and available space per page
@@ -644,7 +651,14 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
       const descriptionWidth = contentWidth - rightPadding;
 
       // Split text into lines to handle line breaks and wrapping
-      const descriptionText = boatDetails.description.replace(/\\n/g, "\n");
+      let descriptionText = boatDetails.description.replace(/\\n/g, "\n");
+
+      // Normalize Unicode characters for better PDF rendering
+      descriptionText = descriptionText.normalize("NFC");
+
+      // Clean up any problematic characters that might cause spacing issues
+      descriptionText = descriptionText.replace(/[\u200B-\u200D\uFEFF]/g, ""); // Remove zero-width characters
+
       const lines = doc.splitTextToSize(descriptionText, descriptionWidth);
 
       // Calculate line height and available space per page
