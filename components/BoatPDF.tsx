@@ -288,29 +288,38 @@ const calculateCenteredPosition = (
   return { xOffset, yOffset };
 };
 
-const addHeaderAndFooter = (doc: jsPDF, pageNum: number) => {
+const addHeaderAndFooter = (
+  doc: jsPDF,
+  pageNum: number,
+  brokerFriendly = false
+) => {
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;
 
-  // Adjust logo Y position to 8 (was 7, originally 10)
-  doc.addImage(
-    "https://res.cloudinary.com/dsgx9xiva/image/upload/v1729862411/nova-yachts/logo/Nova_Yachts_3_uqn6wk_1_z8ikck.png",
-    "PNG",
-    margin,
-    8, // Changed from 7 to 8 for better positioning
-    LOGO_WIDTH,
-    LOGO_HEIGHT
-  );
+  // Broker-friendly mode keeps the header/footer separator lines (so the
+  // layout/spacing is unchanged) but omits all Nova Yachts branding and
+  // contact details, so the document can be shared by a broker.
+  if (!brokerFriendly) {
+    // Adjust logo Y position to 8 (was 7, originally 10)
+    doc.addImage(
+      "https://res.cloudinary.com/dsgx9xiva/image/upload/v1729862411/nova-yachts/logo/Nova_Yachts_3_uqn6wk_1_z8ikck.png",
+      "PNG",
+      margin,
+      8, // Changed from 7 to 8 for better positioning
+      LOGO_WIDTH,
+      LOGO_HEIGHT
+    );
 
-  // Improve email/phone visual hierarchy
-  doc.setFontSize(9);
-  doc.setTextColor("#94a3b8"); // Lighter color for labels
-  doc.text("Email", pageWidth - margin - 60, 12);
-  doc.text("Phone", pageWidth - margin - 60, 18);
+    // Improve email/phone visual hierarchy
+    doc.setFontSize(9);
+    doc.setTextColor("#94a3b8"); // Lighter color for labels
+    doc.text("Email", pageWidth - margin - 60, 12);
+    doc.text("Phone", pageWidth - margin - 60, 18);
 
-  doc.setTextColor("#0f172a"); // Darker color for values
-  doc.text("office@novayachts.eu", pageWidth - margin - 35, 12);
-  doc.text("+385 98 301 987", pageWidth - margin - 35, 18);
+    doc.setTextColor("#0f172a"); // Darker color for values
+    doc.text("office@novayachts.eu", pageWidth - margin - 35, 12);
+    doc.text("+385 98 301 987", pageWidth - margin - 35, 18);
+  }
 
   // Make separator lines bolder
   doc.setDrawColor("#cbd5e1");
@@ -325,22 +334,29 @@ const addHeaderAndFooter = (doc: jsPDF, pageNum: number) => {
     doc.internal.pageSize.height - 25
   );
 
-  // Center both texts
-  const footerY = doc.internal.pageSize.height - 15;
-  doc.setFontSize(11);
-  doc.setTextColor("#0f172a");
-  const websiteText = "www.novayachts.eu";
-  const websiteWidth = doc.getTextWidth(websiteText);
-  doc.text(websiteText, pageWidth / 2 - websiteWidth / 2, footerY);
+  if (!brokerFriendly) {
+    // Center both texts
+    const footerY = doc.internal.pageSize.height - 15;
+    doc.setFontSize(11);
+    doc.setTextColor("#0f172a");
+    const websiteText = "www.novayachts.eu";
+    const websiteWidth = doc.getTextWidth(websiteText);
+    doc.text(websiteText, pageWidth / 2 - websiteWidth / 2, footerY);
 
-  doc.setFontSize(9);
-  doc.setTextColor("#64748b");
-  const companyText = "Nova Yachts d.o.o Zagreb, Croatia";
-  const companyWidth = doc.getTextWidth(companyText);
-  doc.text(companyText, pageWidth / 2 - companyWidth / 2, footerY + 5);
+    doc.setFontSize(9);
+    doc.setTextColor("#64748b");
+    const companyText = "Nova Yachts d.o.o Zagreb, Croatia";
+    const companyWidth = doc.getTextWidth(companyText);
+    doc.text(companyText, pageWidth / 2 - companyWidth / 2, footerY + 5);
+  }
 };
 
-export const generatePDF = async (boatDetails: BoatDetails) => {
+export const generatePDF = async (
+  boatDetails: BoatDetails,
+  options: { brokerFriendly?: boolean } = {}
+) => {
+  const { brokerFriendly = false } = options;
+
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -354,7 +370,7 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
   let yPos = 40; // Start after header
 
   // Add header to first page
-  addHeaderAndFooter(doc, 1);
+  addHeaderAndFooter(doc, 1, brokerFriendly);
 
   // Boat name (title) - centered
   doc.setFont("times", "normal");
@@ -499,7 +515,7 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
   // Updated gallery section
   if (boatDetails.otherPhotos && boatDetails.otherPhotos.length > 0) {
     doc.addPage();
-    addHeaderAndFooter(doc, 3);
+    addHeaderAndFooter(doc, 3, brokerFriendly);
     yPos = 40;
 
     // Update gallery title to serif font
@@ -559,7 +575,8 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
           doc.addPage();
           addHeaderAndFooter(
             doc,
-            Math.floor(i / (GALLERY_IMAGES_PER_ROW * 2)) + 4
+            Math.floor(i / (GALLERY_IMAGES_PER_ROW * 2)) + 4,
+            brokerFriendly
           );
           yPos = 40;
         }
@@ -572,7 +589,7 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
     if (yPos > doc.internal.pageSize.height - 100) {
       // Check if we need a new page
       doc.addPage();
-      addHeaderAndFooter(doc, doc.getNumberOfPages());
+      addHeaderAndFooter(doc, doc.getNumberOfPages(), brokerFriendly);
       yPos = 40;
     } else {
       yPos += 20; // Add some spacing if on same page
@@ -617,7 +634,7 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
         // Check if we need a new page
         if (yPos + lineHeight > maxYPerPage) {
           doc.addPage();
-          addHeaderAndFooter(doc, doc.getNumberOfPages());
+          addHeaderAndFooter(doc, doc.getNumberOfPages(), brokerFriendly);
           yPos = 40;
         }
 
@@ -629,7 +646,7 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
   } else {
     // If no gallery, just add description on the next page
     doc.addPage();
-    addHeaderAndFooter(doc, 3);
+    addHeaderAndFooter(doc, 3, brokerFriendly);
     yPos = 40;
 
     // Add Description section with proper pagination
@@ -671,7 +688,7 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
         // Check if we need a new page
         if (yPos + lineHeight > maxYPerPage) {
           doc.addPage();
-          addHeaderAndFooter(doc, doc.getNumberOfPages());
+          addHeaderAndFooter(doc, doc.getNumberOfPages(), brokerFriendly);
           yPos = 40;
         }
 
@@ -683,7 +700,8 @@ export const generatePDF = async (boatDetails: BoatDetails) => {
   }
 
   // Save the PDF
-  doc.save(`${boatDetails.name.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  const baseFileName = boatDetails.name.replace(/\s+/g, "-").toLowerCase();
+  doc.save(`${baseFileName}${brokerFriendly ? "-broker" : ""}.pdf`);
 };
 
 // New interface for simplified boat data in brochure

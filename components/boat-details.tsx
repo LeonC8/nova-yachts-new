@@ -110,6 +110,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
   const [boatDetails, setBoatDetails] = useState<BoatDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [isBrokerPdfLoading, setIsBrokerPdfLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [formStatus, setFormStatus] = useState<"idle" | "success" | "error">(
     "idle"
@@ -236,13 +237,16 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
     }
   };
 
-  const handlePdfGeneration = async () => {
-    if (!boatDetails || isPdfLoading) return;
-    setIsPdfLoading(true);
+  const handlePdfGeneration = async (brokerFriendly = false) => {
+    if (!boatDetails || isPdfLoading || isBrokerPdfLoading) return;
+    const setLoading = brokerFriendly
+      ? setIsBrokerPdfLoading
+      : setIsPdfLoading;
+    setLoading(true);
     try {
-      await generatePDF(boatDetails);
+      await generatePDF(boatDetails, { brokerFriendly });
     } finally {
-      setIsPdfLoading(false);
+      setLoading(false);
     }
   };
 
@@ -268,18 +272,32 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
               <p className="text-xs font-medium text-gray-500 mb-0 tracking-wider">
                 {boatDetails.condition.toUpperCase()}
               </p>
-              <Button
-                onClick={handlePdfGeneration}
-                className="md:hidden flex items-center justify-center bg-white text-gray-800 border border-gray-300 rounded-md w-8 h-8 p-0 hover:bg-white active:bg-white"
-                size="icon"
-                disabled={isPdfLoading}
-              >
-                {isPdfLoading ? (
-                  <div className="animate-spin h-3 w-3 border-2 border-gray-500 border-t-transparent rounded-full" />
-                ) : (
-                  <Download className="h-3 w-3" />
-                )}
-              </Button>
+              <div className="md:hidden flex items-center gap-2">
+                <Button
+                  onClick={() => handlePdfGeneration(false)}
+                  className="flex items-center justify-center bg-white text-gray-800 border border-gray-300 rounded-md w-8 h-8 p-0 hover:bg-white active:bg-white"
+                  size="icon"
+                  disabled={isPdfLoading || isBrokerPdfLoading}
+                >
+                  {isPdfLoading ? (
+                    <div className="animate-spin h-3 w-3 border-2 border-gray-500 border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="h-3 w-3" />
+                  )}
+                </Button>
+                <Button
+                  onClick={() => handlePdfGeneration(true)}
+                  className="flex items-center justify-center gap-1 bg-white text-gray-800 border border-gray-300 rounded-md h-8 px-2 text-xs hover:bg-white active:bg-white"
+                  disabled={isPdfLoading || isBrokerPdfLoading}
+                >
+                  {isBrokerPdfLoading ? (
+                    <div className="animate-spin h-3 w-3 border-2 border-gray-500 border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="h-3 w-3" />
+                  )}
+                  Broker
+                </Button>
+              </div>
             </div>
             <h1 className="text-3xl font-serif mt-3 text-gray-800">
               {boatDetails.name}
@@ -666,11 +684,11 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
           )}
         </Dialog>
       </main>
-      <div className="container mx-auto px-4 md:px-20 mb-8 hidden md:block">
+      <div className="container mx-auto px-4 md:px-20 mb-8 hidden md:flex md:gap-3">
         <Button
-          onClick={handlePdfGeneration}
+          onClick={() => handlePdfGeneration(false)}
           className="w-full md:w-auto flex items-center justify-center gap-2 bg-white text-gray-800 border border-gray-300 rounded-md hover:bg-white hover:shadow-md transition-shadow duration-200"
-          disabled={isPdfLoading}
+          disabled={isPdfLoading || isBrokerPdfLoading}
         >
           {isPdfLoading ? (
             <div className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full" />
@@ -678,6 +696,18 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
             <Download className="h-4 w-4" />
           )}
           {isPdfLoading ? "Preparing PDF..." : "Export to PDF"}
+        </Button>
+        <Button
+          onClick={() => handlePdfGeneration(true)}
+          className="w-full md:w-auto flex items-center justify-center gap-2 bg-white text-gray-800 border border-gray-300 rounded-md hover:bg-white hover:shadow-md transition-shadow duration-200"
+          disabled={isPdfLoading || isBrokerPdfLoading}
+        >
+          {isBrokerPdfLoading ? (
+            <div className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          {isBrokerPdfLoading ? "Preparing PDF..." : "Export (Broker)"}
         </Button>
       </div>
       <Footer />
