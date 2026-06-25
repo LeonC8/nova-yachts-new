@@ -2,13 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getDatabase, ref, onValue, Database } from "firebase/database";
+import { getDatabase, ref, onValue, get, Database } from "firebase/database";
 import { FixedNavbar } from "./FixedNavbar";
 import { Footer } from "./Footer";
 import { useRouter } from "next/navigation";
 import { Navbar } from "./Navbar";
 import { Loader } from "./Loader";
 import { X, Phone, Mail, MapPin } from "lucide-react";
+import {
+  SITE_CONFIG_PATH,
+  normalizeSiteConfig,
+  applyManualOrder,
+} from "@/lib/siteConfig";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -101,35 +106,52 @@ export function NewYachtsPageComponent() {
       database = getDatabase(app);
     }
 
-    const boatsRef = ref(database, "boats");
-    onValue(boatsRef, (snapshot) => {
-      const data = snapshot.val();
-      const yachts: Boat[] = [];
-      for (const id in data) {
-        if (data[id].condition === "new") {
-          yachts.push({
-            id,
-            name: data[id].name,
-            price: data[id].price,
-            year: data[id].year,
-            mainPhoto: data[id].mainPhoto,
-            condition: data[id].condition,
-            basicListing: data[id].basicListing,
-            sold: data[id].sold || false,
-          });
-        }
-      }
-      // Sort yachts: non-basic listings first, then basic listings
-      const sortedYachts = yachts.sort((a, b) => {
-        if (a.basicListing === b.basicListing) return 0;
-        return a.basicListing === "yes" ? 1 : -1;
-      });
+    // Load the admin-defined manual ordering once, then subscribe to boats.
+    let orderedIds: string[] = [];
 
-      setNewYachts(sortedYachts);
-      // Ensure we're at the top before removing loading state
-      window.scrollTo(0, 0);
-      setIsLoading(false);
-    });
+    const subscribe = () => {
+      const boatsRef = ref(database, "boats");
+      onValue(boatsRef, (snapshot) => {
+        const data = snapshot.val();
+        const yachts: Boat[] = [];
+        for (const id in data) {
+          if (data[id].condition === "new") {
+            yachts.push({
+              id,
+              name: data[id].name,
+              price: data[id].price,
+              year: data[id].year,
+              mainPhoto: data[id].mainPhoto,
+              condition: data[id].condition,
+              basicListing: data[id].basicListing,
+              sold: data[id].sold || false,
+            });
+          }
+        }
+
+        // Base sort: non-basic listings first, then basic listings.
+        yachts.sort((a, b) => {
+          if (a.basicListing === b.basicListing) return 0;
+          return a.basicListing === "yes" ? 1 : -1;
+        });
+
+        // Apply admin manual ordering on top (ordered boats first, in the
+        // saved order; any unlisted boats keep the base sort below them).
+        const sortedYachts = applyManualOrder(yachts, orderedIds);
+
+        setNewYachts(sortedYachts);
+        // Ensure we're at the top before removing loading state
+        window.scrollTo(0, 0);
+        setIsLoading(false);
+      });
+    };
+
+    get(ref(database, SITE_CONFIG_PATH))
+      .then((snap) => {
+        orderedIds = normalizeSiteConfig(snap.val()).order.new;
+      })
+      .catch(() => {})
+      .finally(subscribe);
   }, []);
 
   const handleBoatClick = (boat: Boat) => {

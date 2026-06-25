@@ -7,6 +7,7 @@ import Image from "next/image";
 import { EditBoatForm } from "./EditBoatForm";
 import AddBoatForm from "./AddBoatForm";
 import { generateBrochurePDF } from "./BoatPDF";
+import { SiteConfigManager } from "./SiteConfigManager";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type {
   DropResult,
@@ -94,6 +95,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
   const [selectedBoatIds, setSelectedBoatIds] = useState<string[]>([]);
   const [brochureTitle, setBrochureTitle] = useState("Nova Yachts");
   const [brochureSubtitle, setBrochureSubtitle] = useState("Collection");
+  const [showSiteConfig, setShowSiteConfig] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -429,6 +431,12 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
             Add New Boat
           </button>
           <button
+            onClick={() => setShowSiteConfig(true)}
+            className="bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+          >
+            Homepage & Ordering
+          </button>
+          <button
             onClick={handleLogout}
             className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
           >
@@ -611,6 +619,14 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
             specific ones
           </p>
         </div>
+      )}
+
+      {/* Homepage & Ordering Manager */}
+      {showSiteConfig && (
+        <SiteConfigManager
+          boats={boats}
+          onClose={() => setShowSiteConfig(false)}
+        />
       )}
 
       {/* Selection Modal */}

@@ -5,11 +5,18 @@ import { Footer } from "./Footer";
 import Link from "next/link";
 import { Navbar } from "./Navbar";
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getDatabase, ref, onValue, Database } from "firebase/database";
+import { getDatabase, ref, onValue, get, Database } from "firebase/database";
 import { useRouter } from "next/navigation";
 import { Loader } from "./Loader";
 import { ArrowRight, X, Phone, Mail, MapPin } from "lucide-react";
 import Image from "next/image";
+import {
+  FEATURED_COUNT,
+  SITE_CONFIG_PATH,
+  normalizeSiteConfig,
+  LEGACY_NEW_YACHTS_IDS,
+  LEGACY_PRE_OWNED_YACHTS_IDS,
+} from "@/lib/siteConfig";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -32,19 +39,6 @@ if (!getApps().length) {
   app = initializeApp(firebaseConfig);
   database = getDatabase(app);
 }
-
-// Hardcoded boat IDs for each section
-const NEW_YACHTS_IDS = [
-  "-OA7TvkMaDuVSbrNcH6l",
-  "-OVYoHsESFYYlwMgp7qe",
-  "-OUAizmOHXqeSDDZLr36",
-];
-
-const PRE_OWNED_YACHTS_IDS = [
-  "-OAD8tAn6Mpwkj9TrS11",
-  "-OAChnNruMgk21661rVD",
-  "-OS9s7vUAt16l0MrTnHb",
-];
 
 interface Boat {
   id: string;
@@ -152,52 +146,51 @@ export function HomePageComponent() {
       database = getDatabase(app);
     }
 
-    const boatsRef = ref(database, "boats");
-    onValue(boatsRef, (snapshot) => {
-      const data = snapshot.val();
-      const inStockBoats: Boat[] = [];
-      const preOwnedBoats: Boat[] = [];
+    // Featured IDs come from the admin-managed siteConfig node. We read it once
+    // up front; if it hasn't been configured yet we fall back to the legacy
+    // hardcoded IDs so the homepage is never empty.
+    let newIdOrder: string[] = LEGACY_NEW_YACHTS_IDS;
+    let preOwnedIdOrder: string[] = LEGACY_PRE_OWNED_YACHTS_IDS;
 
-      for (const id in data) {
-        const boat = {
-          id,
-          name: data[id].name,
-          price: data[id].price,
-          year: data[id].year,
-          mainPhoto: data[id].mainPhoto,
-          inStock: data[id].inStock,
-          basicListing: data[id].basicListing,
-          sold: data[id].sold || false,
-        };
-        if (NEW_YACHTS_IDS.includes(id) || PRE_OWNED_YACHTS_IDS.includes(id)) {
-          if (NEW_YACHTS_IDS.includes(id)) {
-            inStockBoats.push(boat);
-          } else if (PRE_OWNED_YACHTS_IDS.includes(id)) {
-            preOwnedBoats.push(boat);
-          }
-        }
-      }
+    const buildSections = (data: any) => {
+      const newIds = newIdOrder.slice(0, FEATURED_COUNT);
+      const preOwnedIds = preOwnedIdOrder.slice(0, FEATURED_COUNT);
 
-      // Sort boats - maintain order from hardcoded arrays and prioritize non-basic listings
-      const sortBoats = (boats: Boat[], idOrder: string[]) => {
-        return boats.sort((a, b) => {
-          // First, sort by order in the hardcoded array
-          const aIndex = idOrder.indexOf(a.id);
-          const bIndex = idOrder.indexOf(b.id);
-          if (aIndex !== bIndex) {
-            return aIndex - bIndex;
-          }
+      const collect = (ids: string[]): Boat[] =>
+        ids
+          .filter((id) => data && data[id])
+          .map((id) => ({
+            id,
+            name: data[id].name,
+            price: data[id].price,
+            year: data[id].year,
+            mainPhoto: data[id].mainPhoto,
+            inStock: data[id].inStock,
+            basicListing: data[id].basicListing,
+            sold: data[id].sold || false,
+          }));
 
-          // Then sort by basic listing (non-basic first)
-          if (a.basicListing === "yes" && b.basicListing !== "yes") return 1;
-          if (a.basicListing !== "yes" && b.basicListing === "yes") return -1;
-          return 0;
+      setInStockYachts(collect(newIds));
+      setPreOwnedYachts(collect(preOwnedIds));
+    };
+
+    const configRef = ref(database, SITE_CONFIG_PATH);
+    get(configRef)
+      .then((snap) => {
+        const config = normalizeSiteConfig(snap.val());
+        if (config.featured.new.length > 0) newIdOrder = config.featured.new;
+        if (config.featured.preOwned.length > 0)
+          preOwnedIdOrder = config.featured.preOwned;
+      })
+      .catch(() => {
+        // keep legacy fallback on error
+      })
+      .finally(() => {
+        const boatsRef = ref(database, "boats");
+        onValue(boatsRef, (snapshot) => {
+          buildSections(snapshot.val());
         });
-      };
-
-      setInStockYachts(sortBoats(inStockBoats, NEW_YACHTS_IDS));
-      setPreOwnedYachts(sortBoats(preOwnedBoats, PRE_OWNED_YACHTS_IDS));
-    });
+      });
   }, []);
 
   const handleImageLoad = () => {
