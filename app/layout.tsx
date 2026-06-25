@@ -4,6 +4,7 @@ import "./globals.css";
 import { GeistSans } from 'geist/font/sans';
 import { Analytics } from "@vercel/analytics/react";
 import Script from 'next/script';
+import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
 
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default function RootLayout({
       </head>
       <body className={`${GeistSans.className} antialiased`}>
         {children}
+        <FloatingWhatsApp />
         <Analytics />
 
         {/* Google Tag Manager scripts */}
