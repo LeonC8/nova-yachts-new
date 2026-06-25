@@ -117,6 +117,19 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
   );
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // Publish the current yacht name so the global floating WhatsApp button can
+  // prefill a message that references this specific boat.
+  useEffect(() => {
+    if (boatDetails?.name) {
+      document.body.setAttribute("data-boat-name", boatDetails.name);
+    } else {
+      document.body.removeAttribute("data-boat-name");
+    }
+    return () => {
+      document.body.removeAttribute("data-boat-name");
+    };
+  }, [boatDetails?.name]);
+
   useEffect(() => {
     const scrollToTop = () => {
       window.scrollTo({

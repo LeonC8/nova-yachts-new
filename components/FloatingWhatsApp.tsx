@@ -1,10 +1,55 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+
+const PHONE = "38598301987";
+
+// Default message used everywhere except boat detail pages.
+const GENERIC_MESSAGE =
+  "Hello, I'm interested in your selection of boats. Please contact me on this number.";
+
+const boatMessage = (name: string) =>
+  `Hello, I'm interested in the ${name}. Could you kindly send me more details?`;
+
 // Fixed floating WhatsApp button shown on every page in the bottom-right
-// corner, with a small "WhatsApp Message" banner above it. Uses the same
-// number/icon as the navbar WhatsApp link.
+// corner, with a small "WhatsApp Message" banner above it. On a yacht detail
+// page it prefills a message mentioning that specific yacht; everywhere else
+// it uses a generic enquiry message.
 export function FloatingWhatsApp() {
+  const pathname = usePathname();
+  const [boatName, setBoatName] = useState<string | null>(null);
+
+  const onBoatPage = pathname?.startsWith("/boat/") ?? false;
+
+  // boat-details publishes the current yacht name onto <body data-boat-name>.
+  // We pick it up here so the global button can reference it without the
+  // server-rendered layout having to know about page data.
+  useEffect(() => {
+    if (!onBoatPage) {
+      setBoatName(null);
+      return;
+    }
+
+    const read = () =>
+      setBoatName(document.body.getAttribute("data-boat-name") || null);
+
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["data-boat-name"],
+    });
+    return () => observer.disconnect();
+  }, [onBoatPage, pathname]);
+
+  const message =
+    onBoatPage && boatName ? boatMessage(boatName) : GENERIC_MESSAGE;
+  const href = `https://wa.me/${PHONE}?text=${encodeURIComponent(message)}`;
+
   return (
     <a
-      href="https://wa.me/38598301987"
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat on WhatsApp"
