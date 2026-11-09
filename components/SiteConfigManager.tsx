@@ -15,6 +15,7 @@ import {
   SITE_CONFIG_PATH,
   SiteConfig,
   normalizeSiteConfig,
+  orderCategory,
   LEGACY_NEW_YACHTS_IDS,
   LEGACY_PRE_OWNED_YACHTS_IDS,
 } from "@/lib/siteConfig";
@@ -26,6 +27,8 @@ interface Boat {
   year: string;
   price: string;
   mainPhoto?: string;
+  basicListing?: string;
+  sold?: boolean;
 }
 
 interface SiteConfigManagerProps {
@@ -47,6 +50,23 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Every edit goes through here so we can warn about unsaved changes.
+  const updateConfig = (next: SiteConfig) => {
+    setConfig(next);
+    setIsDirty(true);
+    setSaveMessage("");
+  };
+
+  const handleClose = () => {
+    if (
+      isDirty &&
+      !window.confirm("You have unsaved changes. Close without saving?")
+    )
+      return;
+    onClose();
+  };
 
   const newBoats = boats.filter((b) => b.condition === "new");
   const preOwnedBoats = boats.filter((b) => b.condition === "pre-owned");
@@ -68,15 +88,11 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
           preOwnedBoats.some((b) => b.id === id)
         );
 
-      // Order lists default to the current full category lists so the admin
-      // can immediately drag to reorder.
-      const mergeOrder = (saved: string[], all: Boat[]): string[] => {
-        const existing = saved.filter((id) => all.some((b) => b.id === id));
-        const missing = all
-          .filter((b) => !existing.includes(b.id))
-          .map((b) => b.id);
-        return [...existing, ...missing];
-      };
+      // Order lists start as exactly what the live category page shows
+      // today (saved order first, then any boats not yet ordered), so what the
+      // admin sees here always matches the site.
+      const mergeOrder = (saved: string[], all: Boat[]): string[] =>
+        orderCategory(all, saved).map((b) => b.id);
       loaded.order.new = mergeOrder(loaded.order.new, newBoats);
       loaded.order.preOwned = mergeOrder(loaded.order.preOwned, preOwnedBoats);
 
@@ -106,6 +122,7 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
         },
       };
       await set(dbRef(database, SITE_CONFIG_PATH), clean);
+      setIsDirty(false);
       setSaveMessage("Saved! Changes are now live on the site.");
     } catch (err) {
       console.error("Error saving site config:", err);
@@ -128,7 +145,7 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
     const next = current.includes(id)
       ? current.filter((x) => x !== id)
       : [...current, id];
-    setConfig({
+    updateConfig({
       ...config,
       featured: { ...config.featured, [featuredKey]: next },
     });
@@ -139,7 +156,7 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
     const items = Array.from(config.featured[featuredKey]);
     const [moved] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, moved);
-    setConfig({
+    updateConfig({
       ...config,
       featured: { ...config.featured, [featuredKey]: items },
     });
@@ -150,16 +167,26 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
     activeTab === "orderNew" ? "new" : "preOwned";
   const orderList = config ? config.order[orderKey] : [];
 
-  const onOrderDragEnd = (result: DropResult) => {
-    if (!config || !result.destination) return;
+  const moveInOrder = (from: number, to: number) => {
+    if (!config) return;
     const items = Array.from(config.order[orderKey]);
-    const [moved] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, moved);
-    setConfig({
+    if (to < 0 || to >= items.length || from === to) return;
+    const [moved] = items.splice(from, 1);
+    items.splice(to, 0, moved);
+    updateConfig({
       ...config,
       order: { ...config.order, [orderKey]: items },
     });
   };
+
+  const onOrderDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    moveInOrder(result.source.index, result.destination.index);
+  };
+
+  const featuredIdsForOrderTab = config
+    ? new Set(config.featured[orderKey].slice(0, FEATURED_COUNT))
+    : new Set<string>();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -170,7 +197,7 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
               Homepage & Page Ordering
             </h2>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
             >
               ×
@@ -359,25 +386,32 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
             </div>
           ) : (
             // Order tab: reorder the full category list
-            <div>
+            <div className="max-w-3xl">
               <p className="text-sm text-gray-600 mb-4">
-                Drag to set the order yachts appear on the{" "}
+                This is the exact order yachts appear on the{" "}
                 <strong>
                   {orderKey === "new" ? "New Yachts" : "Pre-owned"}
                 </strong>{" "}
-                page. (Sold and basic listings still follow site display rules.)
+                page. Drag a row, or use the arrows, then press{" "}
+                <strong>Save Changes</strong>. The rows after the homepage
+                featured yachts are also the ones previewed in the homepage
+                &ldquo;View all&rdquo; button.
               </p>
+              {/* No inner scroll container here: the modal body is the single
+                  scroll parent, which keeps drag auto-scrolling reliable. */}
               <DragDropContext onDragEnd={onOrderDragEnd}>
                 <Droppable droppableId="page-order">
                   {(provided: DroppableProvided) => (
                     <div
                       {...provided.droppableProps}
                       ref={provided.innerRef}
-                      className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 max-w-2xl"
+                      className="space-y-2"
                     >
                       {orderList.map((id, index) => {
                         const boat = boatById(id);
                         if (!boat) return null;
+                        const isFirst = index === 0;
+                        const isLast = index === orderList.length - 1;
                         return (
                           <Draggable key={id} draggableId={id} index={index}>
                             {(
@@ -388,12 +422,15 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
                                 ref={p.innerRef}
                                 {...p.draggableProps}
                                 {...p.dragHandleProps}
-                                className={`flex items-center space-x-3 p-2 bg-white rounded-lg border cursor-move ${
+                                className={`flex items-center gap-3 p-2 bg-white rounded-lg border cursor-move ${
                                   snap.isDragging
                                     ? "border-blue-500 shadow-lg"
                                     : "border-gray-200"
-                                }`}
+                                } ${boat.sold ? "opacity-60" : ""}`}
                               >
+                                <div className="text-gray-300 select-none px-1" aria-hidden>
+                                  ⋮⋮
+                                </div>
                                 <div className="text-sm font-bold text-gray-500 min-w-[24px]">
                                   {index + 1}
                                 </div>
@@ -414,10 +451,47 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
                                   <h4 className="font-semibold text-sm text-gray-900 truncate">
                                     {boat.name}
                                   </h4>
-                                  <p className="text-xs text-gray-600">
-                                    {boat.year} • €
-                                    {Number(boat.price).toLocaleString()}
-                                  </p>
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                    <span className="text-xs text-gray-600">
+                                      {boat.year} • €
+                                      {Number(boat.price).toLocaleString()}
+                                    </span>
+                                    {featuredIdsForOrderTab.has(id) && (
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">
+                                        Featured
+                                      </span>
+                                    )}
+                                    {boat.sold && (
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-700 border border-red-200 rounded px-1.5 py-0.5">
+                                        Sold
+                                      </span>
+                                    )}
+                                    {boat.basicListing === "yes" && (
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600 border border-gray-200 rounded px-1.5 py-0.5">
+                                        Basic
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  {[
+                                    { label: "⤒", title: "Move to top", to: 0, disabled: isFirst },
+                                    { label: "↑", title: "Move up", to: index - 1, disabled: isFirst },
+                                    { label: "↓", title: "Move down", to: index + 1, disabled: isLast },
+                                    { label: "⤓", title: "Move to bottom", to: orderList.length - 1, disabled: isLast },
+                                  ].map((btn) => (
+                                    <button
+                                      key={btn.title}
+                                      type="button"
+                                      title={btn.title}
+                                      aria-label={btn.title}
+                                      disabled={btn.disabled}
+                                      onClick={() => moveInOrder(index, btn.to)}
+                                      className="w-7 h-7 rounded border border-gray-200 text-gray-600 text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                      {btn.label}
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
                             )}
@@ -439,10 +513,17 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
         </div>
 
         <div className="p-6 border-t border-gray-200 flex justify-between items-center">
-          <div className="text-sm text-gray-600">{saveMessage}</div>
+          <div className="text-sm text-gray-600">
+            {saveMessage ||
+              (isDirty && (
+                <span className="text-amber-600 font-medium">
+                  Unsaved changes
+                </span>
+              ))}
+          </div>
           <div className="flex gap-3">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
             >
               Close

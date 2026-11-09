@@ -14,6 +14,7 @@ import {
   FEATURED_COUNT,
   SITE_CONFIG_PATH,
   normalizeSiteConfig,
+  orderCategory,
   LEGACY_NEW_YACHTS_IDS,
   LEGACY_PRE_OWNED_YACHTS_IDS,
 } from "@/lib/siteConfig";
@@ -49,6 +50,75 @@ interface Boat {
   inStock: string;
   basicListing: string;
   sold?: boolean;
+}
+
+// Summary for the "View all" button under each homepage section.
+interface CategoryPreview {
+  forSaleCount: number;
+  // The next yachts on the category page after the featured ones.
+  next: { id: string; name: string; mainPhoto: string }[];
+}
+
+const EMPTY_PREVIEW: CategoryPreview = { forSaleCount: 0, next: [] };
+
+interface ViewAllButtonProps {
+  label: string;
+  preview: CategoryPreview;
+  onClick: () => void;
+}
+
+function ViewAllButton({ label, preview, onClick }: ViewAllButtonProps) {
+  const { forSaleCount, next } = preview;
+  const namesLine =
+    next.length > 0
+      ? `Including ${next
+          .slice(0, 2)
+          .map((b) => b.name)
+          .join(", ")}${forSaleCount > FEATURED_COUNT + 2 ? " & more" : ""}`
+      : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group mt-6 w-full flex items-center justify-between gap-4 rounded border border-gray-300 bg-white px-4 py-3 md:px-5 md:py-4 text-left shadow-sm hover:border-gray-800 hover:shadow-md transition-all"
+    >
+      <div className="flex items-center gap-4 min-w-0">
+        {next.length > 0 && (
+          <div className="flex flex-shrink-0 -space-x-3">
+            {next.map((boat, i) => (
+              <div
+                key={boat.id}
+                className="relative h-11 w-14 md:h-12 md:w-16 overflow-hidden rounded-md bg-gray-200 ring-2 ring-white"
+                style={{ zIndex: next.length - i }}
+              >
+                <Image
+                  src={boat.mainPhoto}
+                  alt={boat.name}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-sm md:text-base font-medium text-gray-900">
+            {forSaleCount > 0
+              ? `View all ${forSaleCount} ${label}`
+              : `View all ${label}`}
+          </p>
+          {namesLine && (
+            <p className="text-xs text-gray-500 truncate mt-0.5">
+              {namesLine}
+            </p>
+          )}
+        </div>
+      </div>
+      <ArrowRight className="h-5 w-5 flex-shrink-0 text-gray-500 group-hover:text-gray-900 group-hover:translate-x-1 transition-all" />
+    </button>
+  );
 }
 
 interface ContactOverlayProps {
@@ -121,6 +191,9 @@ export function HomePageComponent() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [inStockYachts, setInStockYachts] = useState<Boat[]>([]);
   const [preOwnedYachts, setPreOwnedYachts] = useState<Boat[]>([]);
+  const [newPreview, setNewPreview] = useState<CategoryPreview>(EMPTY_PREVIEW);
+  const [preOwnedPreview, setPreOwnedPreview] =
+    useState<CategoryPreview>(EMPTY_PREVIEW);
   const [isLoading, setIsLoading] = useState(true);
   const [isContactOverlayOpen, setIsContactOverlayOpen] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState(0);
@@ -151,6 +224,35 @@ export function HomePageComponent() {
     // hardcoded IDs so the homepage is never empty.
     let newIdOrder: string[] = LEGACY_NEW_YACHTS_IDS;
     let preOwnedIdOrder: string[] = LEGACY_PRE_OWNED_YACHTS_IDS;
+    // Manual ordering of the category pages, used for the "View all" preview.
+    let newPageOrder: string[] = [];
+    let preOwnedPageOrder: string[] = [];
+
+    // Count of yachts still for sale, plus the next few the visitor will see
+    // on the category page after the featured ones.
+    const buildPreview = (
+      data: any,
+      condition: "new" | "pre-owned",
+      pageOrder: string[],
+      featuredIds: string[]
+    ): CategoryPreview => {
+      const all = Object.keys(data || {})
+        .filter((id) => data[id]?.condition === condition)
+        .map((id) => ({
+          id,
+          name: data[id].name as string,
+          mainPhoto: data[id].mainPhoto as string,
+          basicListing: data[id].basicListing as string,
+          sold: !!data[id].sold,
+        }));
+      const forSale = orderCategory(all, pageOrder).filter((b) => !b.sold);
+      const featured = new Set(featuredIds);
+      const next = forSale
+        .filter((b) => !featured.has(b.id) && b.mainPhoto)
+        .slice(0, 3)
+        .map(({ id, name, mainPhoto }) => ({ id, name, mainPhoto }));
+      return { forSaleCount: forSale.length, next };
+    };
 
     const buildSections = (data: any) => {
       const newIds = newIdOrder.slice(0, FEATURED_COUNT);
@@ -172,6 +274,10 @@ export function HomePageComponent() {
 
       setInStockYachts(collect(newIds));
       setPreOwnedYachts(collect(preOwnedIds));
+      setNewPreview(buildPreview(data, "new", newPageOrder, newIds));
+      setPreOwnedPreview(
+        buildPreview(data, "pre-owned", preOwnedPageOrder, preOwnedIds)
+      );
     };
 
     const configRef = ref(database, SITE_CONFIG_PATH);
@@ -181,6 +287,8 @@ export function HomePageComponent() {
         if (config.featured.new.length > 0) newIdOrder = config.featured.new;
         if (config.featured.preOwned.length > 0)
           preOwnedIdOrder = config.featured.preOwned;
+        newPageOrder = config.order.new;
+        preOwnedPageOrder = config.order.preOwned;
       })
       .catch(() => {
         // keep legacy fallback on error
@@ -316,12 +424,6 @@ export function HomePageComponent() {
               >
                 New Yachts
               </h2>
-              <button
-                onClick={() => handleViewAll("/new-yachts")}
-                className="text-gray-700 text-sm underline"
-              >
-                View all
-              </button>
             </div>
             <div className="relative">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -435,6 +537,11 @@ export function HomePageComponent() {
                 ))}
               </div>
             </div>
+            <ViewAllButton
+              label="new yachts"
+              preview={newPreview}
+              onClick={() => handleViewAll("/new-yachts")}
+            />
           </section>
         </div>
 
@@ -448,12 +555,6 @@ export function HomePageComponent() {
               >
                 Pre-owned
               </h2>
-              <button
-                onClick={() => handleViewAll("/pre-owned")}
-                className="text-gray-700 text-sm underline"
-              >
-                View all
-              </button>
             </div>
             <div className="relative">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -567,6 +668,11 @@ export function HomePageComponent() {
                 ))}
               </div>
             </div>
+            <ViewAllButton
+              label="pre-owned yachts"
+              preview={preOwnedPreview}
+              onClick={() => handleViewAll("/pre-owned")}
+            />
           </section>
         </div>
 

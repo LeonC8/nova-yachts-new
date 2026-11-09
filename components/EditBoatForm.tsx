@@ -16,6 +16,12 @@ import type {
   DraggableStateSnapshot,
 } from "@hello-pangea/dnd";
 import { resizeImage } from "../utils/imageResizer";
+import { VideoUploadField } from "./VideoUploadField";
+import {
+  VideoItem,
+  uploadVideos,
+  videoItemsFromUrls,
+} from "@/lib/videoUpload";
 
 interface Boat {
   id: string;
@@ -53,6 +59,7 @@ interface Boat {
   };
   mainPhoto?: string;
   otherPhotos?: string[];
+  videos?: string[];
   [key: string]: any;
 }
 
@@ -88,6 +95,10 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
       url,
     }))
   );
+  const [videos, setVideos] = useState<VideoItem[]>(() =>
+    videoItemsFromUrls(boat.videos)
+  );
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Update formData when boat prop changes
@@ -222,6 +233,9 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
         })
       );
 
+      if (videos.some((v) => v.isNew)) setVideoProgress(0);
+      const videoUrls = await uploadVideos(videos, setVideoProgress);
+
       const formattedDescription = formData.description.replace(/\n/g, "\\n");
 
       const updatedBoatData = {
@@ -229,6 +243,7 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
         description: formattedDescription,
         mainPhoto: mainPhotoUrl,
         otherPhotos: updatedOtherPhotoUrls,
+        videos: videoUrls,
       };
 
       const boatRef = dbRef(database, `boats/${boat.id}`);
@@ -241,6 +256,7 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
       alert("Error updating boat. Please try again.");
     } finally {
       setLoading(false);
+      setVideoProgress(null);
     }
   };
 
@@ -272,7 +288,7 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
 
       <div className="mb-6 overflow-x-auto">
         <nav className="flex space-x-4 border-b border-gray-200">
-          {["basic", "equipment", "description", "photos"].map((tab) => (
+          {["basic", "equipment", "description", "photos", "videos"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -744,12 +760,20 @@ export function EditBoatForm({ boat, onSuccess }: EditBoatFormProps) {
           </div>
         )}
 
+        {activeTab === "videos" && (
+          <VideoUploadField videos={videos} onChange={setVideos} />
+        )}
+
         <button
           type="submit"
           disabled={loading}
           className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
         >
-          {loading ? "Updating Boat..." : "Update Boat"}
+          {loading
+            ? videoProgress !== null
+              ? `Uploading videos... ${videoProgress}%`
+              : "Updating Boat..."
+            : "Update Boat"}
         </button>
       </form>
     </div>

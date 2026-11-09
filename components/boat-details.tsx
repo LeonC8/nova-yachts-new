@@ -16,6 +16,7 @@ import {
   Navigation,
   Download,
   Send,
+  Play,
 } from "lucide-react";
 import { FixedNavbar } from "./FixedNavbar";
 import { Footer } from "./Footer";
@@ -74,6 +75,7 @@ interface BoatDetails {
   equipment: Record<string, boolean>;
   mainPhoto: string;
   otherPhotos: string[];
+  videos?: string[];
   taxStatus: string;
   propulsionType: string;
   engineHours?: string;
@@ -167,12 +169,12 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
   }, [id]);
 
   const nextImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % boatImages.length);
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % media.length);
   };
 
   const prevImage = () => {
     setCurrentImageIndex(
-      (prevIndex) => (prevIndex - 1 + boatImages.length) % boatImages.length
+      (prevIndex) => (prevIndex - 1 + media.length) % media.length
     );
   };
 
@@ -189,6 +191,11 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
   }, [isCarouselOpen]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Don't treat scrubbing a video's controls as a swipe.
+    if ((e.target as HTMLElement).tagName === "VIDEO") {
+      setTouchStart(null);
+      return;
+    }
     setTouchStart(e.targetTouches[0].clientX);
   };
 
@@ -274,6 +281,15 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
   const boatImages = boatDetails.otherPhotos
     ? [boatDetails.mainPhoto, ...boatDetails.otherPhotos]
     : [boatDetails.mainPhoto];
+  const boatVideos = (boatDetails.videos || []).filter(Boolean);
+
+  // Everything the fullscreen carousel can show: photos first, then videos.
+  const media: { type: "image" | "video"; src: string }[] = [
+    ...boatImages.map((src) => ({ type: "image" as const, src })),
+    ...boatVideos.map((src) => ({ type: "video" as const, src })),
+  ];
+  const firstVideoIndex = boatImages.length;
+  const currentMedia = media[currentImageIndex] ?? media[0];
 
   return (
     <>
@@ -354,7 +370,25 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
                 />
                 <div className="absolute bottom-3 right-3 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-xs font-medium text-gray-300 hover:bg-opacity-70 transition-all duration-200 ease-in-out">
                   {boatImages.length} photos
+                  {boatVideos.length > 0 &&
+                    ` · ${boatVideos.length} video${
+                      boatVideos.length > 1 ? "s" : ""
+                    }`}
                 </div>
+                {boatVideos.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentImageIndex(firstVideoIndex);
+                      setIsCarouselOpen(true);
+                    }}
+                    className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-white bg-opacity-90 text-gray-900 pl-2 pr-3 py-1 rounded-full text-xs font-medium shadow hover:bg-opacity-100 transition-all duration-200 ease-in-out"
+                  >
+                    <Play className="h-3.5 w-3.5 fill-current" />
+                    Play video
+                  </button>
+                )}
               </div>
               <div className="hidden lg:grid grid-cols-2 gap-2">
                 {boatImages.slice(1, 5).map((img, index) => (
@@ -500,6 +534,33 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
                 {parseDescription(boatDetails.description)}
               </p>
             </section>
+
+            {boatVideos.length > 0 && (
+              <section id="videos" className="mb-8">
+                <h2 className="text-xl text-gray-800 font-medium mb-6 pt-4">
+                  {boatVideos.length > 1 ? "Videos" : "Video"}
+                </h2>
+                <div className="space-y-4">
+                  {boatVideos.map((src, index) => (
+                    <div
+                      key={src}
+                      className="relative w-full aspect-video overflow-hidden rounded-lg bg-black"
+                    >
+                      {/* #t=0.1 makes mobile Safari show the first frame
+                          instead of a black box before playback. */}
+                      <video
+                        src={`${src}#t=0.1`}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="absolute inset-0 h-full w-full object-contain"
+                        aria-label={`${boatDetails.name} - Video ${index + 1}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="mb-8">
               <h2 className="text-xl text-gray-800 font-medium mb-6">
@@ -657,13 +718,24 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
               >
-                <Image
-                  src={boatImages[currentImageIndex]}
-                  alt={`${boatDetails.name} - Fullscreen Image`}
-                  fill
-                  sizes="100vw"
-                  className="object-contain"
-                />
+                {currentMedia.type === "video" ? (
+                  <video
+                    key={currentMedia.src}
+                    src={currentMedia.src}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="max-h-full max-w-full px-16"
+                  />
+                ) : (
+                  <Image
+                    src={currentMedia.src}
+                    alt={`${boatDetails.name} - Fullscreen Image`}
+                    fill
+                    sizes="100vw"
+                    className="object-contain"
+                  />
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -681,7 +753,7 @@ export default function BoatDetails({ params }: BoatDetailsProps) {
                   <ChevronRight className="h-10 w-10" />
                 </Button>
                 <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 bg-black bg-opacity-30 rounded-full px-3 py-2">
-                  {boatImages.map((_, index) => (
+                  {media.map((_, index) => (
                     <div
                       key={index}
                       className={`w-4 h-0.5 rounded-full transition-all duration-200 ease-in-out ${

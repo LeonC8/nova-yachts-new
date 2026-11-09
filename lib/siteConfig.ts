@@ -92,3 +92,21 @@ export function applyManualOrder<T extends { id: string }>(
     return ai - bi;
   });
 }
+
+/**
+ * The exact order a category page (/new-yachts, /pre-owned) displays boats in:
+ * a base sort (full listings before basic listings) with the admin's manual
+ * order applied on top. Shared by the category pages, the homepage "View all"
+ * preview and the admin ordering screen so all three always agree.
+ */
+export function orderCategory<T extends { id: string; basicListing?: string }>(
+  boats: T[],
+  orderedIds: string[]
+): T[] {
+  const base = [...boats].sort((a, b) => {
+    const aBasic = a.basicListing === "yes" ? 1 : 0;
+    const bBasic = b.basicListing === "yes" ? 1 : 0;
+    return aBasic - bBasic;
+  });
+  return applyManualOrder(base, orderedIds);
+}

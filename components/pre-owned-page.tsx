@@ -12,7 +12,7 @@ import { X, Phone, Mail, MapPin } from "lucide-react";
 import {
   SITE_CONFIG_PATH,
   normalizeSiteConfig,
-  applyManualOrder,
+  orderCategory,
 } from "@/lib/siteConfig";
 
 // Firebase configuration
@@ -129,14 +129,8 @@ export function PreOwnedPageComponent() {
           }
         }
 
-        // Base sort: non-basic listings first, then basic listings.
-        yachts.sort((a, b) => {
-          if (a.basicListing === b.basicListing) return 0;
-          return a.basicListing === "yes" ? 1 : -1;
-        });
-
-        // Apply admin manual ordering on top.
-        const sortedYachts = applyManualOrder(yachts, orderedIds);
+        // Base sort (full listings first) + admin manual ordering on top.
+        const sortedYachts = orderCategory(yachts, orderedIds);
 
         setPreOwnedYachts(sortedYachts);
         // Ensure we're at the top before removing loading state
@@ -174,7 +168,7 @@ export function PreOwnedPageComponent() {
             Pre-Owned Yachts
           </h2>
           <p className="pt-0 pb-6 mt-0 text-gray-700 text-sm ">
-            {preOwnedYachts.length} available
+            {preOwnedYachts.filter((y) => !y.sold).length} available
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {preOwnedYachts.map((yacht) => (

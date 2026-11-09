@@ -12,7 +12,7 @@ import { X, Phone, Mail, MapPin } from "lucide-react";
 import {
   SITE_CONFIG_PATH,
   normalizeSiteConfig,
-  applyManualOrder,
+  orderCategory,
 } from "@/lib/siteConfig";
 
 // Firebase configuration
@@ -129,15 +129,8 @@ export function NewYachtsPageComponent() {
           }
         }
 
-        // Base sort: non-basic listings first, then basic listings.
-        yachts.sort((a, b) => {
-          if (a.basicListing === b.basicListing) return 0;
-          return a.basicListing === "yes" ? 1 : -1;
-        });
-
-        // Apply admin manual ordering on top (ordered boats first, in the
-        // saved order; any unlisted boats keep the base sort below them).
-        const sortedYachts = applyManualOrder(yachts, orderedIds);
+        // Base sort (full listings first) + admin manual ordering on top.
+        const sortedYachts = orderCategory(yachts, orderedIds);
 
         setNewYachts(sortedYachts);
         // Ensure we're at the top before removing loading state
@@ -173,7 +166,7 @@ export function NewYachtsPageComponent() {
         <section className="container mx-auto px-4 sm:mt-4 mb-4 py-5 overflow-hidden xl:px-20">
           <h2 className="text-2xl font-medium mb-2 font-serif">New Yachts</h2>
           <p className="pt-0 pb-6 mt-0 text-gray-700 text-sm ">
-            {newYachts.length} available
+            {newYachts.filter((y) => !y.sold).length} available
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {newYachts.map((yacht) => (

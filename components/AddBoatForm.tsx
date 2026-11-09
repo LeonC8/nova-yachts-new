@@ -18,6 +18,8 @@ import type {
   DraggableStateSnapshot,
 } from "@hello-pangea/dnd";
 import { resizeImage } from "../utils/imageResizer";
+import { VideoUploadField } from "./VideoUploadField";
+import { VideoItem, uploadVideos } from "@/lib/videoUpload";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -93,6 +95,8 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
 
   const [mainPhoto, setMainPhoto] = useState<PreviewImage | null>(null);
   const [otherPhotos, setOtherPhotos] = useState<PreviewImage[]>([]);
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -246,12 +250,17 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
         })
       );
 
+      // Upload videos (can be large, so progress is shown on the button)
+      if (videos.some((v) => v.isNew)) setVideoProgress(0);
+      const videoUrls = await uploadVideos(videos, setVideoProgress);
+
       // Prepare boat data with formatted description
       const boatData = {
         ...formData,
         description: formattedDescription, // Use formatted description
         mainPhoto: mainPhotoUrl,
         otherPhotos: otherPhotoUrls,
+        videos: videoUrls,
       };
 
       // Add boat data to Realtime Database
@@ -265,6 +274,7 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
       alert("Error adding boat. Please try again.");
     } finally {
       setLoading(false);
+      setVideoProgress(null);
     }
   };
 
@@ -296,7 +306,7 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
 
       <div className="mb-6 overflow-x-auto">
         <nav className="flex space-x-4 border-b border-gray-200">
-          {["basic", "equipment", "description", "photos"].map((tab) => (
+          {["basic", "equipment", "description", "photos", "videos"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -761,12 +771,20 @@ export default function AddBoatForm({ onSuccess }: AddBoatFormProps) {
           </div>
         )}
 
+        {activeTab === "videos" && (
+          <VideoUploadField videos={videos} onChange={setVideos} />
+        )}
+
         <button
           type="submit"
           disabled={loading}
           className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
         >
-          {loading ? "Adding Boat..." : "Add Boat"}
+          {loading
+            ? videoProgress !== null
+              ? `Uploading videos... ${videoProgress}%`
+              : "Adding Boat..."
+            : "Add Boat"}
         </button>
       </form>
     </div>

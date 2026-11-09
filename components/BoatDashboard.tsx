@@ -70,6 +70,7 @@ interface Boat {
   };
   mainPhoto?: string;
   otherPhotos?: string[];
+  videos?: string[];
 }
 
 interface LoginState {
@@ -150,6 +151,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
             },
             mainPhoto: boatData.mainPhoto || "",
             otherPhotos: boatData.otherPhotos || [],
+            videos: boatData.videos || [],
           };
           boatsData.push(boat);
         });
@@ -434,7 +436,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
             onClick={() => setShowSiteConfig(true)}
             className="bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
           >
-            Homepage & Ordering
+            Homepage & Page Order
           </button>
           <button
             onClick={handleLogout}
