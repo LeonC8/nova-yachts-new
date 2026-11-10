@@ -423,24 +423,36 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Boat Dashboard</h2>
-        <div className="flex gap-4">
+      {/* Mobile: title + small logout on one row, action buttons below.
+          Desktop: everything on one row. */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-gray-800">
+            Boat Dashboard
+          </h2>
+          <button
+            onClick={handleLogout}
+            className="sm:hidden text-sm text-gray-500 underline"
+          >
+            Logout
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-4">
           <button
             onClick={() => setView("add")}
-            className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="bg-blue-500 text-white text-sm sm:text-base py-2.5 sm:py-2 px-3 sm:px-4 rounded-md whitespace-nowrap hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             Add New Boat
           </button>
           <button
             onClick={() => setShowSiteConfig(true)}
-            className="bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            className="bg-purple-600 text-white text-sm sm:text-base py-2.5 sm:py-2 px-3 sm:px-4 rounded-md whitespace-nowrap hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
           >
-            Homepage & Page Order
+            Homepage & Order
           </button>
           <button
             onClick={handleLogout}
-            className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            className="hidden sm:block bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
           >
             Logout
           </button>
@@ -556,13 +568,13 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
             </div>
           </div>
 
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
             <button
               onClick={handleBrochureGeneration}
               disabled={isBrochureLoading}
               className="bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 
                          focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 
-                         transition-colors duration-200 flex items-center gap-2 text-lg font-medium
+                         transition-colors duration-200 flex items-center justify-center gap-2 text-base sm:text-lg font-medium
                          disabled:bg-green-400 disabled:cursor-not-allowed"
             >
               {isBrochureLoading ? (
@@ -596,7 +608,7 @@ export function BoatDashboard({ initialAuthState }: BoatDashboardProps) {
               disabled={isBrochureLoading}
               className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 
-                         transition-colors duration-200 flex items-center gap-2 text-lg font-medium
+                         transition-colors duration-200 flex items-center justify-center gap-2 text-base sm:text-lg font-medium
                          disabled:bg-blue-400 disabled:cursor-not-allowed"
             >
               <svg

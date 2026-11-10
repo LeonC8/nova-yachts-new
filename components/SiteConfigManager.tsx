@@ -189,12 +189,12 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
     : new Set<string>();
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[88vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-gray-200">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 sm:p-4">
+      <div className="bg-white sm:rounded-lg shadow-xl max-w-6xl w-full h-full sm:h-auto sm:max-h-[88vh] overflow-hidden flex flex-col">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Homepage & Page Ordering
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900">
+              Homepage & Page Order
             </h2>
             <button
               onClick={handleClose}
@@ -203,12 +203,12 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
               ×
             </button>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 sm:mt-4 -mx-4 px-4 sm:mx-0 sm:px-0 flex gap-2 overflow-x-auto sm:flex-wrap">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors ${
                   activeTab === tab.key
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -220,7 +220,7 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-grow">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-grow">
           {!config ? (
             <div className="text-center text-gray-500 py-12">Loading…</div>
           ) : isFeaturedTab ? (
@@ -387,15 +387,17 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
           ) : (
             // Order tab: reorder the full category list
             <div className="max-w-3xl">
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-xs sm:text-sm text-gray-600 mb-4">
                 This is the exact order yachts appear on the{" "}
                 <strong>
                   {orderKey === "new" ? "New Yachts" : "Pre-owned"}
                 </strong>{" "}
                 page. Drag a row, or use the arrows, then press{" "}
-                <strong>Save Changes</strong>. The rows after the homepage
-                featured yachts are also the ones previewed in the homepage
-                &ldquo;View all&rdquo; button.
+                <strong>Save Changes</strong>.
+                <span className="hidden sm:inline">
+                  {" "}The rows after the homepage featured yachts are also the
+                  ones previewed in the homepage &ldquo;View all&rdquo; button.
+                </span>
               </p>
               {/* No inner scroll container here: the modal body is the single
                   scroll parent, which keeps drag auto-scrolling reliable. */}
@@ -422,19 +424,19 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
                                 ref={p.innerRef}
                                 {...p.draggableProps}
                                 {...p.dragHandleProps}
-                                className={`flex items-center gap-3 p-2 bg-white rounded-lg border cursor-move ${
+                                className={`flex items-center gap-2 sm:gap-3 p-2 bg-white rounded-lg border cursor-move ${
                                   snap.isDragging
                                     ? "border-blue-500 shadow-lg"
                                     : "border-gray-200"
                                 } ${boat.sold ? "opacity-60" : ""}`}
                               >
-                                <div className="text-gray-300 select-none px-1" aria-hidden>
+                                <div className="hidden sm:block text-gray-300 select-none px-1" aria-hidden>
                                   ⋮⋮
                                 </div>
-                                <div className="text-sm font-bold text-gray-500 min-w-[24px]">
+                                <div className="text-sm font-bold text-gray-500 min-w-[20px] sm:min-w-[24px]">
                                   {index + 1}
                                 </div>
-                                <div className="relative w-12 h-12 flex-shrink-0">
+                                <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
                                   {boat.mainPhoto ? (
                                     <Image
                                       src={boat.mainPhoto}
@@ -475,10 +477,10 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   {[
-                                    { label: "⤒", title: "Move to top", to: 0, disabled: isFirst },
-                                    { label: "↑", title: "Move up", to: index - 1, disabled: isFirst },
-                                    { label: "↓", title: "Move down", to: index + 1, disabled: isLast },
-                                    { label: "⤓", title: "Move to bottom", to: orderList.length - 1, disabled: isLast },
+                                    { label: "⤒", title: "Move to top", to: 0, disabled: isFirst, desktopOnly: true },
+                                    { label: "↑", title: "Move up", to: index - 1, disabled: isFirst, desktopOnly: false },
+                                    { label: "↓", title: "Move down", to: index + 1, disabled: isLast, desktopOnly: false },
+                                    { label: "⤓", title: "Move to bottom", to: orderList.length - 1, disabled: isLast, desktopOnly: true },
                                   ].map((btn) => (
                                     <button
                                       key={btn.title}
@@ -487,7 +489,7 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
                                       aria-label={btn.title}
                                       disabled={btn.disabled}
                                       onClick={() => moveInOrder(index, btn.to)}
-                                      className="w-7 h-7 rounded border border-gray-200 text-gray-600 text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                      className={`${btn.desktopOnly ? "hidden sm:flex" : "flex"} items-center justify-center w-8 h-8 sm:w-7 sm:h-7 rounded border border-gray-200 text-gray-600 text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed`}
                                     >
                                       {btn.label}
                                     </button>
@@ -512,7 +514,7 @@ export function SiteConfigManager({ boats, onClose }: SiteConfigManagerProps) {
           )}
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex justify-between items-center">
+        <div className="p-4 sm:p-6 border-t border-gray-200 flex justify-between items-center gap-3">
           <div className="text-sm text-gray-600">
             {saveMessage ||
               (isDirty && (
