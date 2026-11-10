@@ -43,6 +43,12 @@ export function FloatingWhatsApp() {
     return () => observer.disconnect();
   }, [onBoatPage, pathname]);
 
+  // Not shown on internal admin screens.
+  const isAdminPage = ["/admin", "/addBoat", "/remove-boats"].some((p) =>
+    pathname?.startsWith(p)
+  );
+  if (isAdminPage) return null;
+
   const message =
     onBoatPage && boatName ? boatMessage(boatName) : GENERIC_MESSAGE;
   const href = `https://wa.me/${PHONE}?text=${encodeURIComponent(message)}`;

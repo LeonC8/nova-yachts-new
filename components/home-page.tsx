@@ -81,42 +81,45 @@ function ViewAllButton({ label, preview, onClick }: ViewAllButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="group mt-6 w-full flex items-center justify-between gap-4 rounded border border-gray-300 bg-white px-4 py-3 md:px-5 md:py-4 text-left shadow-sm hover:border-gray-800 hover:shadow-md transition-all"
+      className="group mt-6 md:mt-8 block w-full overflow-hidden rounded-lg bg-slate-900 text-left text-white shadow-md hover:bg-slate-800 hover:shadow-lg transition-all"
     >
-      <div className="flex items-center gap-4 min-w-0">
+      <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:gap-6 md:p-5">
         {next.length > 0 && (
-          <div className="flex flex-shrink-0 -space-x-3">
-            {next.map((boat, i) => (
+          <div className="grid grid-cols-3 gap-2 md:flex md:flex-shrink-0">
+            {next.map((boat) => (
               <div
                 key={boat.id}
-                className="relative h-11 w-14 md:h-12 md:w-16 overflow-hidden rounded-md bg-gray-200 ring-2 ring-white"
-                style={{ zIndex: next.length - i }}
+                className="relative h-20 overflow-hidden rounded bg-slate-700 md:h-16 md:w-24"
               >
                 <Image
                   src={boat.mainPhoto}
                   alt={boat.name}
                   fill
-                  sizes="64px"
-                  className="object-cover"
+                  sizes="(max-width: 768px) 33vw, 96px"
+                  className="object-cover opacity-90 transition-opacity group-hover:opacity-100"
                 />
               </div>
             ))}
           </div>
         )}
-        <div className="min-w-0">
-          <p className="text-sm md:text-base font-medium text-gray-900">
-            {forSaleCount > 0
-              ? `View all ${forSaleCount} ${label}`
-              : `View all ${label}`}
-          </p>
-          {namesLine && (
-            <p className="text-xs text-gray-500 truncate mt-0.5">
-              {namesLine}
+        <div className="flex min-w-0 items-center justify-between gap-4 md:flex-1">
+          <div className="min-w-0">
+            <p className="font-serif text-xl md:text-2xl">
+              {forSaleCount > 0
+                ? `View all ${forSaleCount} ${label}`
+                : `View all ${label}`}
             </p>
-          )}
+            {namesLine && (
+              <p className="mt-1 truncate text-xs text-slate-300 md:text-sm">
+                {namesLine}
+              </p>
+            )}
+          </div>
+          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-white text-slate-900 transition-transform group-hover:translate-x-1 md:h-12 md:w-12">
+            <ArrowRight className="h-5 w-5" />
+          </span>
         </div>
       </div>
-      <ArrowRight className="h-5 w-5 flex-shrink-0 text-gray-500 group-hover:text-gray-900 group-hover:translate-x-1 transition-all" />
     </button>
   );
 }
@@ -205,6 +208,14 @@ export function HomePageComponent() {
     setIsLoading(true);
     router.push(path);
   };
+
+  // Safety net: the loader waits for the hero/brand images' onLoad, which can
+  // be missed (image finished before hydration) or never fire (load error).
+  // Never keep visitors staring at a spinner for more than 3 seconds.
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 3000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -330,6 +341,7 @@ export function HomePageComponent() {
                   alt={`Slide ${index + 1}`}
                   className="w-full h-full object-cover"
                   onLoad={handleImageLoad}
+                  onError={handleImageLoad}
                   fill
                   priority={index === 0}
                   quality={75}
@@ -389,6 +401,7 @@ export function HomePageComponent() {
                     alt={`${brand.title} Yacht`}
                     className="w-full h-48 md:h-96 object-cover"
                     onLoad={handleImageLoad}
+                  onError={handleImageLoad}
                     width={800}
                     height={600}
                     quality={75}
@@ -444,6 +457,7 @@ export function HomePageComponent() {
                             alt={yacht.name}
                             className="w-full h-48 md:h-64 object-cover opacity-75"
                             onLoad={handleImageLoad}
+                  onError={handleImageLoad}
                             width={400}
                             height={300}
                             quality={75}
@@ -475,6 +489,7 @@ export function HomePageComponent() {
                             alt={yacht.name}
                             className="w-full h-48 md:h-64 object-cover"
                             onLoad={handleImageLoad}
+                  onError={handleImageLoad}
                             width={400}
                             height={300}
                             quality={75}
@@ -510,6 +525,7 @@ export function HomePageComponent() {
                           alt={yacht.name}
                           className="w-full h-48 md:h-64 object-cover"
                           onLoad={handleImageLoad}
+                  onError={handleImageLoad}
                           width={400}
                           height={300}
                           quality={75}
@@ -575,6 +591,7 @@ export function HomePageComponent() {
                             alt={yacht.name}
                             className="w-full h-48 md:h-64 object-cover opacity-75"
                             onLoad={handleImageLoad}
+                  onError={handleImageLoad}
                             width={400}
                             height={300}
                             quality={75}
@@ -606,6 +623,7 @@ export function HomePageComponent() {
                             alt={yacht.name}
                             className="w-full h-48 md:h-64 object-cover"
                             onLoad={handleImageLoad}
+                  onError={handleImageLoad}
                             width={400}
                             height={300}
                             quality={75}
@@ -641,6 +659,7 @@ export function HomePageComponent() {
                           alt={yacht.name}
                           className="w-full h-48 md:h-64 object-cover"
                           onLoad={handleImageLoad}
+                  onError={handleImageLoad}
                           width={400}
                           height={300}
                           quality={75}
